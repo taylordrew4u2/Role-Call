@@ -71,18 +71,35 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## Vercel Deployment
+## Vercel Deployment (free integrations only)
 
-1. Push to GitHub
-2. Import the repo in [vercel.com/new](https://vercel.com/new)
-3. Add all environment variables from `.env.example` in the Vercel dashboard
-4. Deploy
-5. After first deploy, run:
+No third-party billing or manual key copying required — everything below uses
+Vercel Marketplace integrations with a free plan.
+
+1. Push to GitHub and import the repo in [vercel.com/new](https://vercel.com/new).
+2. **Database (free):** Project → **Storage** → **Create Database** → **Neon** →
+   **Free** plan → connect to the project. This auto-adds `POSTGRES_URL`.
+3. **Login (free):** Project → **Integrations** → **Browse Marketplace** →
+   **Clerk** → install on the **Free** plan. This auto-adds
+   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`.
+4. **Redeploy** so the new environment variables take effect.
+5. **Create the tables + seed roles** by opening this URL once in your browser:
    ```
-   vercel env pull .env.local
-   npm run db:push
-   curl -X POST https://your-app.vercel.app/api/seed
+   https://your-app.vercel.app/api/setup
    ```
+   It creates every table (if missing) and seeds the 20 production roles. Safe
+   to run more than once.
+
+> Email invites (Resend) are optional. Set `RESEND_API_KEY` to enable them; the
+> app works fine without it.
+
+### Local equivalent
+
+```
+vercel env pull .env.local
+npm run db:push          # or just hit /api/setup once
+curl -X POST http://localhost:3000/api/setup
+```
 
 ---
 
