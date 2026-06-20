@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import type { Scene, Shot } from "@/lib/db/schema";
 import { parseShotLines } from "@/lib/parse-shots";
+import { toast } from "@/components/Toaster";
 
 type ViewMode = "scene" | "table" | "cards";
 
@@ -147,9 +148,9 @@ export function ShotListBoard({
       .join("\n");
     try {
       await navigator.clipboard.writeText(text);
-      alert("Shot list copied to clipboard.");
+      toast("Shot list copied to clipboard.");
     } catch {
-      alert("Couldn't copy automatically — your browser blocked it.");
+      toast("Couldn't copy — your browser blocked it.", "error");
     }
   }
 
@@ -228,11 +229,11 @@ export function ShotListBoard({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Clapperboard className="h-5 w-5 text-slate-400" />
+          <Clapperboard className="h-5 w-5 text-slate-400 print:hidden" />
           <h2 className="text-lg font-semibold text-slate-900">Scenes &amp; Shot List</h2>
         </div>
         {isOwner && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap print:hidden">
             <Button
               variant="outline"
               size="sm"
@@ -249,7 +250,7 @@ export function ShotListBoard({
       </div>
 
       {/* View switcher + export */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
           {(
             [
