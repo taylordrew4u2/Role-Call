@@ -20,8 +20,24 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Clapperboard, Film } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Clapperboard,
+  Film,
+  List,
+  Table2,
+  LayoutGrid,
+  ClipboardPaste,
+  Download,
+  Copy,
+  Printer,
+} from "lucide-react";
 import type { Scene, Shot } from "@/lib/db/schema";
+import { parseShotLines } from "@/lib/parse-shots";
+
+type ViewMode = "scene" | "table" | "cards";
 
 const SHOT_SIZES = ["", "EWS", "WS", "MWS", "MS", "MCU", "CU", "ECU", "OTS", "POV", "Insert"];
 const ANGLES = ["", "Eye-level", "High", "Low", "Dutch", "Overhead", "Worm's-eye"];
@@ -62,8 +78,80 @@ export function ShotListBoard({
     shot: Shot | null;
     sceneId: number | null;
   }>({ open: false, shot: null, sceneId: null });
+  const [viewMode, setViewMode] = useState<ViewMode>("scene");
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const api = `/api/projects/${projectId}`;
+
+  const sceneName = (sceneId: number | null) => {
+    if (sceneId === null) return "";
+    const s = scenes.find((x) => x.id === sceneId);
+    return s ? `${s.sceneNumber ? s.sceneNumber + " " : ""}${s.heading}` : "";
+  };
+
+  // ---- Bulk add from text ----
+  async function bulkAdd(text: string, sceneId: number | null) {
+    const parsed = parseShotLines(text);
+    if (parsed.length === 0) return;
+    const res = await fetch(`${api}/shots/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shots: parsed, sceneId }),
+    });
+    if (res.ok) {
+      const created: Shot[] = await res.json();
+      setShots((s) => [...s, ...created]);
+      setBulkOpen(false);
+    }
+  }
+
+  // ---- Export ----
+  function exportRows() {
+    return shots.map((s) => ({
+      Scene: sceneName(s.sceneId),
+      Shot: s.shotNumber,
+      Size: s.shotSize ?? "",
+      Angle: s.angle ?? "",
+      Movement: s.movement ?? "",
+      Lens: s.lens ?? "",
+      Description: s.description,
+      Status: s.status,
+    }));
+  }
+
+  function downloadCsv() {
+    const rows = exportRows();
+    const headers = Object.keys(rows[0] ?? { Shot: "" });
+    const escape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [
+      headers.join(","),
+      ...rows.map((r) => headers.map((h) => escape((r as Record<string, string>)[h])).join(",")),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "shot-list.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyText() {
+    const text = exportRows()
+      .map(
+        (r) =>
+          `${r.Scene ? r.Scene + " — " : ""}${r.Shot}. ${[r.Size, r.Angle, r.Movement, r.Lens]
+            .filter(Boolean)
+            .join(", ")}${r.Description ? " — " + r.Description : ""}`
+      )
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Shot list copied to clipboard.");
+    } catch {
+      alert("Couldn't copy automatically — your browser blocked it.");
+    }
+  }
 
   // ---- Scene actions ----
   async function saveScene(data: Partial<Scene>, existing: Scene | null) {
@@ -134,17 +222,78 @@ export function ShotListBoard({
 
   const unlinkedShots = shots.filter((s) => s.sceneId === null);
 
+  const hasShots = shots.length > 0;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Clapperboard className="h-5 w-5 text-slate-400" />
           <h2 className="text-lg font-semibold text-slate-900">Scenes &amp; Shot List</h2>
         </div>
         {isOwner && (
-          <Button size="sm" onClick={() => setSceneDialog({ open: true, scene: null })}>
-            <Plus className="h-4 w-4 mr-1" /> Add Scene
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkOpen(true)}
+              className="gap-1.5"
+            >
+              <ClipboardPaste className="h-4 w-4" /> Paste shots
+            </Button>
+            <Button size="sm" onClick={() => setSceneDialog({ open: true, scene: null })}>
+              <Plus className="h-4 w-4 mr-1" /> Add Scene
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* View switcher + export */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
+          {(
+            [
+              { id: "scene", label: "By Scene", icon: List },
+              { id: "table", label: "Table", icon: Table2 },
+              { id: "cards", label: "Cards", icon: LayoutGrid },
+            ] as { id: ViewMode; label: string; icon: typeof List }[]
+          ).map((v) => {
+            const Icon = v.icon;
+            return (
+              <button
+                key={v.id}
+                onClick={() => setViewMode(v.id)}
+                className={
+                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors " +
+                  (viewMode === v.id
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:text-slate-900")
+                }
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {v.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {hasShots && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={copyText} className="gap-1.5">
+              <Copy className="h-3.5 w-3.5" /> Copy
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadCsv} className="gap-1.5">
+              <Download className="h-3.5 w-3.5" /> CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              className="gap-1.5"
+            >
+              <Printer className="h-3.5 w-3.5" /> Print
+            </Button>
+          </div>
         )}
       </div>
 
@@ -152,46 +301,91 @@ export function ShotListBoard({
         <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
           <Film className="h-8 w-8 text-slate-300 mx-auto mb-2" />
           <p className="text-sm text-slate-500">
-            No scenes yet. {isOwner ? "Add a scene to start building your shot list." : ""}
+            No shots yet.{" "}
+            {isOwner
+              ? "Add a scene, or use “Paste shots” to enter a list of shots as text."
+              : ""}
           </p>
         </div>
       )}
 
-      {scenes.map((scene) => (
-        <SceneCard
-          key={scene.id}
-          scene={scene}
-          shots={shots.filter((s) => s.sceneId === scene.id)}
-          isOwner={isOwner}
-          onEditScene={() => setSceneDialog({ open: true, scene })}
-          onDeleteScene={() => deleteScene(scene)}
-          onAddShot={() => setShotDialog({ open: true, shot: null, sceneId: scene.id })}
-          onEditShot={(shot) => setShotDialog({ open: true, shot, sceneId: scene.id })}
-          onDeleteShot={deleteShot}
-        />
-      ))}
+      {/* By Scene view */}
+      {viewMode === "scene" && (
+        <>
+          {scenes.map((scene) => (
+            <SceneCard
+              key={scene.id}
+              scene={scene}
+              shots={shots.filter((s) => s.sceneId === scene.id)}
+              isOwner={isOwner}
+              onEditScene={() => setSceneDialog({ open: true, scene })}
+              onDeleteScene={() => deleteScene(scene)}
+              onAddShot={() => setShotDialog({ open: true, shot: null, sceneId: scene.id })}
+              onEditShot={(shot) => setShotDialog({ open: true, shot, sceneId: scene.id })}
+              onDeleteShot={deleteShot}
+            />
+          ))}
 
-      {unlinkedShots.length > 0 && (
-        <SceneCard
-          scene={null}
-          shots={unlinkedShots}
+          {unlinkedShots.length > 0 && (
+            <SceneCard
+              scene={null}
+              shots={unlinkedShots}
+              isOwner={isOwner}
+              onEditScene={() => {}}
+              onDeleteScene={() => {}}
+              onAddShot={() => setShotDialog({ open: true, shot: null, sceneId: null })}
+              onEditShot={(shot) => setShotDialog({ open: true, shot, sceneId: null })}
+              onDeleteShot={deleteShot}
+            />
+          )}
+
+          {isOwner && scenes.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShotDialog({ open: true, shot: null, sceneId: null })}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add shot (no scene)
+            </Button>
+          )}
+        </>
+      )}
+
+      {/* Flat table view */}
+      {viewMode === "table" && hasShots && (
+        <FlatShotTable
+          shots={shots}
+          sceneName={sceneName}
           isOwner={isOwner}
-          onEditScene={() => {}}
-          onDeleteScene={() => {}}
-          onAddShot={() => setShotDialog({ open: true, shot: null, sceneId: null })}
-          onEditShot={(shot) => setShotDialog({ open: true, shot, sceneId: null })}
+          onEditShot={(shot) =>
+            setShotDialog({ open: true, shot, sceneId: shot.sceneId })
+          }
           onDeleteShot={deleteShot}
         />
       )}
 
-      {isOwner && scenes.length > 0 && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShotDialog({ open: true, shot: null, sceneId: null })}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Add shot (no scene)
-        </Button>
+      {/* Cards view */}
+      {viewMode === "cards" && hasShots && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {shots.map((shot) => (
+            <ShotCard
+              key={shot.id}
+              shot={shot}
+              sceneName={sceneName(shot.sceneId)}
+              isOwner={isOwner}
+              onEdit={() => setShotDialog({ open: true, shot, sceneId: shot.sceneId })}
+              onDelete={() => deleteShot(shot)}
+            />
+          ))}
+        </div>
+      )}
+
+      {bulkOpen && (
+        <BulkAddDialog
+          scenes={scenes}
+          onClose={() => setBulkOpen(false)}
+          onAdd={bulkAdd}
+        />
       )}
 
       {sceneDialog.open && (
@@ -540,6 +734,189 @@ function ShotDialog({
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={submit} disabled={saving}>
             {saving ? "Saving…" : "Save Shot"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FlatShotTable({
+  shots,
+  sceneName,
+  isOwner,
+  onEditShot,
+  onDeleteShot,
+}: {
+  shots: Shot[];
+  sceneName: (sceneId: number | null) => string;
+  isOwner: boolean;
+  onEditShot: (shot: Shot) => void;
+  onDeleteShot: (shot: Shot) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-14">#</TableHead>
+            <TableHead>Scene</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="w-16">Size</TableHead>
+            <TableHead className="w-24">Angle</TableHead>
+            <TableHead className="w-24">Move</TableHead>
+            <TableHead className="w-20">Lens</TableHead>
+            <TableHead className="w-24">Status</TableHead>
+            {isOwner && <TableHead className="w-20" />}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {shots.map((shot) => (
+            <TableRow key={shot.id}>
+              <TableCell className="font-medium">{shot.shotNumber || "—"}</TableCell>
+              <TableCell className="text-xs text-slate-500">
+                {sceneName(shot.sceneId) || "—"}
+              </TableCell>
+              <TableCell>{shot.description || <span className="text-slate-400">—</span>}</TableCell>
+              <TableCell>{shot.shotSize || "—"}</TableCell>
+              <TableCell>{shot.angle || "—"}</TableCell>
+              <TableCell>{shot.movement || "—"}</TableCell>
+              <TableCell>{shot.lens || "—"}</TableCell>
+              <TableCell>{statusBadge(shot.status)}</TableCell>
+              {isOwner && (
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => onEditShot(shot)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => onDeleteShot(shot)}>
+                      <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                    </Button>
+                  </div>
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function ShotCard({
+  shot,
+  sceneName,
+  isOwner,
+  onEdit,
+  onDelete,
+}: {
+  shot: Shot;
+  sceneName: string;
+  isOwner: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const specs = [shot.shotSize, shot.angle, shot.movement, shot.lens].filter(Boolean);
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 flex flex-col">
+      <div className="flex items-start justify-between gap-2">
+        <span className="font-semibold text-slate-900">
+          {shot.shotNumber ? `Shot ${shot.shotNumber}` : "Shot"}
+        </span>
+        {statusBadge(shot.status)}
+      </div>
+      {sceneName && <p className="text-xs text-slate-400 mt-0.5">{sceneName}</p>}
+      <p className="text-sm text-slate-700 mt-2 flex-1">
+        {shot.description || <span className="text-slate-400">No description</span>}
+      </p>
+      {specs.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-3">
+          {specs.map((s, i) => (
+            <span key={i} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+              {s}
+            </span>
+          ))}
+        </div>
+      )}
+      {isOwner && (
+        <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-slate-100">
+          <Button size="sm" variant="ghost" onClick={onEdit}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onDelete}>
+            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BulkAddDialog({
+  scenes,
+  onClose,
+  onAdd,
+}: {
+  scenes: Scene[];
+  onClose: () => void;
+  onAdd: (text: string, sceneId: number | null) => Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const [sceneId, setSceneId] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  const previewCount = parseShotLines(text).length;
+
+  async function submit() {
+    if (previewCount === 0) return;
+    setSaving(true);
+    await onAdd(text, sceneId ? parseInt(sceneId, 10) : null);
+    setSaving(false);
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Paste shots as text</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">
+            One shot per line. Either type a plain description per line, or use{" "}
+            <code className="bg-slate-100 px-1 rounded">|</code> to separate columns in
+            this order:
+          </p>
+          <p className="text-xs text-slate-500 bg-slate-50 rounded-md px-3 py-2 font-mono">
+            number | size | angle | movement | lens | description
+            <br />
+            1 | WS | Eye-level | Static | 35mm | Establishing shot of the diner
+            <br />
+            Close on the coffee cup as steam rises
+          </p>
+          <div className="space-y-1.5">
+            <Label>Add all to scene (optional)</Label>
+            <select className={selectClass} value={sceneId} onChange={(e) => setSceneId(e.target.value)}>
+              <option value="">No scene</option>
+              {scenes.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.sceneNumber ? s.sceneNumber + " " : ""}
+                  {s.heading}
+                </option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            className="w-full min-h-[200px] rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={"1 | WS | | Dolly | | Wide of the kitchen\nCloser on the knife block\n..."}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={saving || previewCount === 0}>
+            {saving ? "Adding…" : `Add ${previewCount} shot${previewCount !== 1 ? "s" : ""}`}
           </Button>
         </DialogFooter>
       </DialogContent>

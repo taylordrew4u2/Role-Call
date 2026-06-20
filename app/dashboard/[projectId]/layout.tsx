@@ -8,6 +8,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Clapperboard, ArrowLeft, Calendar } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { ProjectTabs } from "@/components/ProjectTabs";
+import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { getProductionType } from "@/lib/production-types";
 
 type Params = Promise<{ projectId: string }>;
@@ -48,7 +49,12 @@ export default async function ProjectLayout({
             <span className="hidden sm:inline">RoleCall</span>
           </Link>
         </div>
-        <UserButton />
+        <div className="flex items-center gap-2">
+          {project.ownerId === userId && (
+            <DeleteProjectButton projectId={id} projectTitle={project.title} />
+          )}
+          <UserButton />
+        </div>
       </header>
 
       {/* Project title */}
