@@ -121,3 +121,4 @@ assignments     — id, project_id, role_id, assigned_member_id, backup_member_i
 | `npm run db:push` | Push Drizzle schema to Postgres |
 | `npm run db:studio` | Open Drizzle Studio |
 | `npm run db:generate` | Generate Drizzle migrations |
+| `npm run lint` | Run ESLint |
