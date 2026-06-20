@@ -20,26 +20,43 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Members invited to a project
+// Members invited to a project (cast & crew)
 export const projectMembers = pgTable("project_members", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
   clerkUserId: text("clerk_user_id"), // Null until they accept
-  email: text("email").notNull(),
+  email: text("email"), // optional — actors may be added without an email
   displayName: text("display_name").notNull(),
+  kind: text("kind").notNull().default("crew"), // crew | cast
+  character: text("character"), // character played, for cast
   status: text("status").notNull().default("invited"), // invited | active
 });
 
-// Film production roles (seeded once, shared across projects)
+// Film production roles. Global templates have project_id = NULL and are shared
+// across every project; rows with a project_id are custom roles for that project.
 export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  projectId: integer("project_id").references(() => projects.id, {
+    onDelete: "cascade",
+  }),
+  name: text("name").notNull(),
   category: text("category").notNull(),
   duties: jsonb("duties").$type<string[]>().notNull().default([]),
   isCritical: boolean("is_critical").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// Global roles a given project has hidden/removed from its board.
+export const projectHiddenRoles = pgTable("project_hidden_roles", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  roleId: integer("role_id")
+    .notNull()
+    .references(() => roles.id, { onDelete: "cascade" }),
 });
 
 // Role assignments per project

@@ -46,22 +46,22 @@ export async function POST(
   if (project.ownerId !== userId)
     return Response.json({ error: "Forbidden" }, { status: 403 });
 
-  const { email, displayName } = await request.json();
-  if (!email || !displayName) {
-    return Response.json(
-      { error: "email and displayName are required" },
-      { status: 400 }
-    );
+  const { email, displayName, kind, character } = await request.json();
+  if (!displayName?.trim()) {
+    return Response.json({ error: "A name is required" }, { status: 400 });
   }
 
-  // Create member record
+  // Create member record. Email is optional (e.g. cast added without one);
+  // members with no email are recorded as active rather than "invited".
   const [member] = await db
     .insert(projectMembers)
     .values({
       projectId: id,
-      email,
-      displayName,
-      status: "invited",
+      email: email?.trim() || null,
+      displayName: displayName.trim(),
+      kind: kind === "cast" ? "cast" : "crew",
+      character: character?.trim() || null,
+      status: email?.trim() ? "invited" : "active",
     })
     .returning();
 
@@ -71,7 +71,7 @@ export async function POST(
     getAppUrl(request)
   ).toString();
   const apiKey = process.env.RESEND_API_KEY;
-  if (apiKey) {
+  if (apiKey && email?.trim()) {
     try {
       const { Resend } = await import("resend");
       const resend = new Resend(apiKey);

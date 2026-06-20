@@ -6,7 +6,7 @@ import { Users } from "lucide-react";
 interface Member {
   id: number;
   displayName: string;
-  email: string;
+  email: string | null;
   status: string;
   roleCount: number;
 }
@@ -54,7 +54,7 @@ export function TeamSidebar({ members, onInvite }: TeamSidebarProps) {
                   <p className="text-sm font-medium text-slate-900 truncate">
                     {m.displayName}
                   </p>
-                  <p className="text-xs text-slate-500 truncate">{m.email}</p>
+                  <p className="text-xs text-slate-500 truncate">{m.email ?? "No email"}</p>
                 </div>
                 <div className="ml-2 flex flex-col items-end gap-1 shrink-0">
                   <Badge

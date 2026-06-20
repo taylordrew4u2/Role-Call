@@ -18,7 +18,7 @@ import { Search, UserCheck } from "lucide-react";
 interface Member {
   id: number;
   displayName: string;
-  email: string;
+  email: string | null;
 }
 
 interface AssignModalProps {
@@ -58,7 +58,7 @@ export function AssignModal({
   const filtered = members.filter(
     (m) =>
       m.displayName.toLowerCase().includes(search.toLowerCase()) ||
-      m.email.toLowerCase().includes(search.toLowerCase())
+      (m.email ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   async function handleSave() {
@@ -161,7 +161,7 @@ export function AssignModal({
                   <span
                     className={`text-xs ${isPrimary ? "text-slate-300" : "text-slate-500"}`}
                   >
-                    {isPrimary ? "Primary" : isBackup ? "Backup" : member.email}
+                    {isPrimary ? "Primary" : isBackup ? "Backup" : member.email ?? ""}
                   </span>
                 </button>
               );

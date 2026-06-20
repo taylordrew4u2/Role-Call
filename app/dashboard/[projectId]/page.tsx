@@ -1,8 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { projects, projectMembers, assignments, roles } from "@/lib/db/schema";
+import { projects, projectMembers, assignments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { getProjectRoles } from "@/lib/db/project-roles";
 import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
 import { CheckCircle2 } from "lucide-react";
 import { getProductionType } from "@/lib/production-types";
@@ -24,7 +25,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
   const [members, projectAssignments, allRoles] = await Promise.all([
     db.select().from(projectMembers).where(eq(projectMembers.projectId, id)),
     db.select().from(assignments).where(eq(assignments.projectId, id)),
-    db.select().from(roles).orderBy(roles.sortOrder),
+    getProjectRoles(id),
   ]);
 
   // Progress stats
