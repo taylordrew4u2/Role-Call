@@ -35,6 +35,7 @@ import {
   Zap,
   Plus,
   Trash2,
+  Pencil,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -115,31 +116,70 @@ export function RoleAssignmentBoard({
   const [inviteOpen, setInviteOpen] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [addRoleOpen, setAddRoleOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleCategory, setNewRoleCategory] = useState("");
   const [newRoleCritical, setNewRoleCritical] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
 
-  async function handleAddRole() {
+  function openAddRole() {
+    setEditingRole(null);
+    setNewRoleName("");
+    setNewRoleCategory("");
+    setNewRoleCritical(false);
+    setAddRoleOpen(true);
+  }
+
+  function openEditRole(role: Role) {
+    setEditingRole(role);
+    setNewRoleName(role.name);
+    setNewRoleCategory(role.category);
+    setNewRoleCritical(role.isCritical);
+    setAddRoleOpen(true);
+  }
+
+  async function handleSaveRole() {
     if (!newRoleName.trim()) return;
     setSavingRole(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/roles`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newRoleName,
-          category: newRoleCategory,
-          isCritical: newRoleCritical,
-        }),
+      const body = JSON.stringify({
+        name: newRoleName,
+        category: newRoleCategory,
+        isCritical: newRoleCritical,
       });
-      if (res.ok) {
-        const created = await res.json();
-        setRoleList((rs) => [...rs, { ...created, duties: created.duties ?? [] }]);
-        setNewRoleName("");
-        setNewRoleCategory("");
-        setNewRoleCritical(false);
-        setAddRoleOpen(false);
+      if (editingRole) {
+        const res = await fetch(
+          `/api/projects/${projectId}/roles/${editingRole.id}`,
+          { method: "PATCH", headers: { "Content-Type": "application/json" }, body }
+        );
+        if (res.ok) {
+          const updated = await res.json();
+          const oldId = updated.replacedRoleId ?? editingRole.id;
+          setRoleList((rs) =>
+            rs.map((r) =>
+              r.id === oldId ? { ...updated, duties: updated.duties ?? [] } : r
+            )
+          );
+          if (updated.replacedRoleId) {
+            setAssignments((as) =>
+              as.map((a) =>
+                a.roleId === updated.replacedRoleId ? { ...a, roleId: updated.id } : a
+              )
+            );
+          }
+          setAddRoleOpen(false);
+        }
+      } else {
+        const res = await fetch(`/api/projects/${projectId}/roles`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setRoleList((rs) => [...rs, { ...created, duties: created.duties ?? [] }]);
+          setAddRoleOpen(false);
+        }
       }
     } finally {
       setSavingRole(false);
@@ -340,7 +380,7 @@ export function RoleAssignmentBoard({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setAddRoleOpen(true)}
+              onClick={openAddRole}
               className="gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -358,11 +398,13 @@ export function RoleAssignmentBoard({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" /> Add a Role
+              {editingRole ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              {editingRole ? "Edit Role" : "Add a Role"}
             </DialogTitle>
             <DialogDescription>
-              Add a custom role to this project. It won&apos;t affect your other
-              projects.
+              {editingRole
+                ? "Changes apply to this project only."
+                : "Add a custom role to this project. It won't affect your other projects."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -397,8 +439,8 @@ export function RoleAssignmentBoard({
             <Button variant="outline" onClick={() => setAddRoleOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddRole} disabled={savingRole || !newRoleName.trim()}>
-              {savingRole ? "Adding…" : "Add Role"}
+            <Button onClick={handleSaveRole} disabled={savingRole || !newRoleName.trim()}>
+              {savingRole ? "Saving…" : editingRole ? "Save" : "Add Role"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -513,6 +555,15 @@ export function RoleAssignmentBoard({
                               }
                             >
                               {isAssigned ? "Reassign" : "Assign"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openEditRole(role)}
+                              title="Edit role"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              <span className="sr-only">Edit role</span>
                             </Button>
                             <Button
                               size="sm"
