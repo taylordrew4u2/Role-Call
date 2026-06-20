@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import {
   ClerkProvider,
-  Show,
   SignInButton,
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import "./globals.css";
 import { Toaster } from "@/components/Toaster";
 
@@ -14,6 +14,21 @@ export const metadata: Metadata = {
   description:
     "Assign every responsibility on your short film so nothing falls through the cracks on shoot day.",
 };
+
+async function NavAuth() {
+  try {
+    const { userId } = await auth();
+    if (userId) return <UserButton />;
+  } catch {
+    // Clerk not configured or middleware unreachable — show sign-in buttons
+  }
+  return (
+    <>
+      <SignInButton fallbackRedirectUrl="/dashboard" />
+      <SignUpButton fallbackRedirectUrl="/dashboard" />
+    </>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -25,13 +40,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <ClerkProvider>
           <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3 print:hidden">
-            <Show when="signed-out">
-              <SignInButton fallbackRedirectUrl="/dashboard" />
-              <SignUpButton fallbackRedirectUrl="/dashboard" />
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
+            <NavAuth />
           </header>
           {children}
           <Toaster />
