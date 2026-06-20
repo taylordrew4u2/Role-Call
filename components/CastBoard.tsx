@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Drama, UserPlus, Plus, Trash2, Mail, Link as LinkIcon } from "lucide-react";
+import { Drama, UserPlus, Plus, Trash2, Mail, Link as LinkIcon, Pencil } from "lucide-react";
 import type { ProjectMember } from "@/lib/db/schema";
 
 export function CastBoard({
@@ -26,17 +26,32 @@ export function CastBoard({
   initialMembers: ProjectMember[];
 }) {
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
-  const [dialog, setDialog] = useState<null | "cast" | "crew">(null);
+  const [dialog, setDialog] = useState<{
+    mode: "cast" | "crew";
+    member: ProjectMember | null;
+  } | null>(null);
 
   const cast = members.filter((m) => m.kind === "cast");
   const crew = members.filter((m) => m.kind !== "cast");
 
-  async function addMember(data: {
-    displayName: string;
-    character?: string;
-    email?: string;
-    kind: "cast" | "crew";
-  }) {
+  async function saveMember(
+    data: { displayName: string; character?: string; email?: string; kind: "cast" | "crew" },
+    existing: ProjectMember | null
+  ) {
+    if (existing) {
+      const res = await fetch(`/api/projects/${projectId}/members/${existing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setMembers((m) => m.map((x) => (x.id === updated.id ? updated : x)));
+        setDialog(null);
+        return true;
+      }
+      return false;
+    }
     const res = await fetch(`/api/projects/${projectId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -101,6 +116,18 @@ export function CastBoard({
             </Button>
           )}
           {isOwner && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                setDialog({ mode: member.kind === "cast" ? "cast" : "crew", member })
+              }
+              title="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {isOwner && (
             <Button size="sm" variant="ghost" onClick={() => removeMember(member)}>
               <Trash2 className="h-3.5 w-3.5 text-red-600" />
             </Button>
@@ -122,7 +149,7 @@ export function CastBoard({
             </h2>
           </div>
           {isOwner && (
-            <Button size="sm" onClick={() => setDialog("cast")}>
+            <Button size="sm" onClick={() => setDialog({ mode: "cast", member: null })}>
               <Plus className="h-4 w-4 mr-1" /> Add Actor
             </Button>
           )}
@@ -149,7 +176,11 @@ export function CastBoard({
             </h2>
           </div>
           {isOwner && (
-            <Button size="sm" variant="outline" onClick={() => setDialog("crew")}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setDialog({ mode: "crew", member: null })}
+            >
               <Mail className="h-4 w-4 mr-1" /> Invite Person
             </Button>
           )}
@@ -167,9 +198,10 @@ export function CastBoard({
 
       {dialog && (
         <PersonDialog
-          mode={dialog}
+          mode={dialog.mode}
+          member={dialog.member}
           onClose={() => setDialog(null)}
-          onSave={addMember}
+          onSave={saveMember}
         />
       )}
     </div>
@@ -178,25 +210,26 @@ export function CastBoard({
 
 function PersonDialog({
   mode,
+  member,
   onClose,
   onSave,
 }: {
   mode: "cast" | "crew";
+  member: ProjectMember | null;
   onClose: () => void;
-  onSave: (data: {
-    displayName: string;
-    character?: string;
-    email?: string;
-    kind: "cast" | "crew";
-  }) => Promise<boolean>;
+  onSave: (
+    data: { displayName: string; character?: string; email?: string; kind: "cast" | "crew" },
+    existing: ProjectMember | null
+  ) => Promise<boolean>;
 }) {
-  const [displayName, setDisplayName] = useState("");
-  const [character, setCharacter] = useState("");
-  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState(member?.displayName ?? "");
+  const [character, setCharacter] = useState(member?.character ?? "");
+  const [email, setEmail] = useState(member?.email ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const isCast = mode === "cast";
+  const isEdit = member !== null;
 
   async function submit() {
     if (!displayName.trim()) {
@@ -205,12 +238,15 @@ function PersonDialog({
     }
     setError("");
     setSaving(true);
-    const ok = await onSave({
-      displayName,
-      character: isCast ? character : undefined,
-      email,
-      kind: mode,
-    });
+    const ok = await onSave(
+      {
+        displayName,
+        character: isCast ? character : undefined,
+        email,
+        kind: mode,
+      },
+      member
+    );
     setSaving(false);
     if (!ok) setError("Something went wrong. Please try again.");
   }
@@ -221,12 +257,12 @@ function PersonDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isCast ? <Drama className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-            {isCast ? "Add Actor" : "Invite Person"}
+            {isEdit ? "Edit" : isCast ? "Add Actor" : "Invite Person"}
           </DialogTitle>
           <DialogDescription>
             {isCast
-              ? "Add a cast member. Email is optional — add it to send a join invite."
-              : "Invite someone to the project. They'll get an email join link if email is set up."}
+              ? "Cast member details. Email is optional — add it to send a join invite."
+              : "Project collaborator. They'll get an email join link if email is set up."}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -266,7 +302,7 @@ function PersonDialog({
             Cancel
           </Button>
           <Button onClick={submit} disabled={saving || !displayName.trim()}>
-            {saving ? "Saving…" : isCast ? "Add Actor" : "Send Invite"}
+            {saving ? "Saving…" : isEdit ? "Save" : isCast ? "Add Actor" : "Send Invite"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -9,6 +9,7 @@ import { Clapperboard, ArrowLeft, Calendar } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { ProjectTabs } from "@/components/ProjectTabs";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
+import { EditProjectButton } from "@/components/EditProjectButton";
 import { getProductionType } from "@/lib/production-types";
 
 type Params = Promise<{ projectId: string }>;
@@ -51,7 +52,16 @@ export default async function ProjectLayout({
         </div>
         <div className="flex items-center gap-2">
           {project.ownerId === userId && (
-            <DeleteProjectButton projectId={id} projectTitle={project.title} />
+            <>
+              <EditProjectButton
+                projectId={id}
+                title={project.title}
+                projectType={project.projectType}
+                shootDate={project.shootDate}
+                description={project.description}
+              />
+              <DeleteProjectButton projectId={id} projectTitle={project.title} />
+            </>
           )}
           <UserButton />
         </div>

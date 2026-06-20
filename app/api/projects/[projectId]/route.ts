@@ -60,13 +60,16 @@ export async function PATCH(
   const project = await getProjectAndVerifyOwner(id, userId);
   if (!project) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const { title, shootDate, description } = await request.json();
+  const body = await request.json();
   const [updated] = await db
     .update(projects)
     .set({
-      title: title ?? project.title,
-      shootDate: shootDate ?? project.shootDate,
-      description: description ?? project.description,
+      title: body.title?.trim() ? body.title.trim() : project.title,
+      projectType:
+        body.projectType !== undefined ? body.projectType : project.projectType,
+      shootDate: body.shootDate !== undefined ? body.shootDate : project.shootDate,
+      description:
+        body.description !== undefined ? body.description : project.description,
     })
     .where(eq(projects.id, id))
     .returning();
