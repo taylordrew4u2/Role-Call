@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Drama, UserPlus, Plus, Trash2, Mail } from "lucide-react";
+import { Drama, UserPlus, Plus, Trash2, Mail, Link as LinkIcon } from "lucide-react";
 import type { ProjectMember } from "@/lib/db/schema";
 
 export function CastBoard({
@@ -59,6 +59,16 @@ export function CastBoard({
     if (res.ok) setMembers((m) => m.filter((x) => x.id !== member.id));
   }
 
+  async function copyInviteLink(member: ProjectMember) {
+    const link = `${window.location.origin}/api/invite?projectId=${projectId}&memberId=${member.id}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      alert(`Invite link copied — send it to ${member.displayName} however you like.`);
+    } catch {
+      prompt("Copy this invite link:", link);
+    }
+  }
+
   function MemberRow({ member }: { member: ProjectMember }) {
     return (
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
@@ -80,6 +90,16 @@ export function CastBoard({
           <Badge variant={member.status === "active" ? "success" : "secondary"}>
             {member.status === "active" ? "Joined" : "Invited"}
           </Badge>
+          {isOwner && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => copyInviteLink(member)}
+              title="Copy invite link"
+            >
+              <LinkIcon className="h-3.5 w-3.5" />
+            </Button>
+          )}
           {isOwner && (
             <Button size="sm" variant="ghost" onClick={() => removeMember(member)}>
               <Trash2 className="h-3.5 w-3.5 text-red-600" />
