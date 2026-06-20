@@ -33,9 +33,11 @@ import {
   Download,
   Copy,
   Printer,
+  Wand2,
 } from "lucide-react";
 import type { Scene, Shot } from "@/lib/db/schema";
 import { parseShotLines } from "@/lib/parse-shots";
+import { suggestShotFields } from "@/lib/suggest-shot";
 import { toast } from "@/components/Toaster";
 
 type ViewMode = "scene" | "table" | "cards";
@@ -81,8 +83,28 @@ export function ShotListBoard({
   }>({ open: false, shot: null, sceneId: null });
   const [viewMode, setViewMode] = useState<ViewMode>("scene");
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const api = `/api/projects/${projectId}`;
+
+  // ---- Build scenes from the saved script (local text parsing, no cost) ----
+  async function generateScenesFromScript() {
+    setGenerating(true);
+    try {
+      const res = await fetch(`${api}/scenes/from-script`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error ?? "Couldn't read the script.", "error");
+        return;
+      }
+      setScenes((s) => [...s, ...(data.scenes ?? [])]);
+      toast(`Added ${data.scenes?.length ?? 0} scenes from the script.`);
+    } catch {
+      toast("Network error. Please try again.", "error");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   const sceneName = (sceneId: number | null) => {
     if (sceneId === null) return "";
@@ -234,6 +256,16 @@ export function ShotListBoard({
         </div>
         {isOwner && (
           <div className="flex items-center gap-2 flex-wrap print:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateScenesFromScript}
+              disabled={generating}
+              className="gap-1.5"
+            >
+              <Wand2 className="h-4 w-4" />
+              {generating ? "Reading script…" : "Scenes from script"}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -686,7 +718,22 @@ function ShotDialog({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Description</Label>
+            <div className="flex items-center justify-between">
+              <Label>Description</Label>
+              <button
+                type="button"
+                onClick={() => {
+                  const s = suggestShotFields(description);
+                  if (s.shotSize) setShotSize(s.shotSize);
+                  if (s.angle) setAngle(s.angle);
+                  if (s.movement) setMovement(s.movement);
+                }}
+                disabled={!description.trim()}
+                className="text-xs text-red-600 hover:underline disabled:text-slate-300 disabled:no-underline"
+              >
+                Suggest size/angle/move
+              </button>
+            </div>
             <textarea
               className="flex min-h-[60px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
               value={description}
