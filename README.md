@@ -47,21 +47,13 @@ Fill in your credentials:
 - **Resend**: Get an API key at [resend.com](https://resend.com)
 - **`NEXT_PUBLIC_APP_URL`**: Set to your local URL for development; on Vercel, the app falls back to `VERCEL_URL` automatically
 
-### 3. Push the database schema
+### 3. Create the tables and seed the roles
 
-```bash
-npm run db:push
-```
+Start the dev server (next step) and open `http://localhost:3000/api/setup`
+once. It creates every table (if missing) and seeds the 20 production roles —
+safe to run more than once. (`npm run db:push` also works for the schema.)
 
-### 4. Seed the roles
-
-```bash
-curl -X POST http://localhost:3000/api/seed
-```
-
-Or visit `http://localhost:3000/api/seed` and POST to it once after starting the dev server.
-
-### 5. Run the dev server
+### 4. Run the dev server
 
 ```bash
 npm run dev
