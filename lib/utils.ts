@@ -20,29 +20,3 @@ export function formatDate(dateStr: string | null | undefined): string {
     return dateStr;
   }
 }
-
-/** Compute assignment progress stats for a project. */
-export function getProgressStats(
-  roles: { isCritical: boolean }[],
-  assignments: { assignedMemberId: number | null }[]
-) {
-  const total = roles.length;
-  const assigned = assignments.filter((a) => a.assignedMemberId !== null).length;
-  const critical = roles.filter((r) => r.isCritical).length;
-  const criticalAssigned = roles.filter((r) => {
-    const a = assignments.find(
-      (a) => a.assignedMemberId !== null
-    );
-    return r.isCritical && !!a;
-  }).length;
-
-  return {
-    total,
-    assigned,
-    unassigned: total - assigned,
-    critical,
-    criticalAssigned,
-    criticalUnassigned: critical - criticalAssigned,
-    percent: total > 0 ? Math.round((assigned / total) * 100) : 0,
-  };
-}
