@@ -18,7 +18,7 @@ export function ProjectTabs({ projectId }: { projectId: number }) {
   ];
 
   return (
-    <nav className="bg-white border-b border-slate-200 px-4 sm:px-6">
+    <nav className="bg-white border-b border-slate-200 px-4 sm:px-6 print:hidden">
       <div className="max-w-7xl mx-auto flex gap-1 overflow-x-auto">
         {tabs.map((tab) => {
           const active =

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Drama, UserPlus, Plus, Trash2, Mail, Link as LinkIcon, Pencil } from "lucide-react";
 import type { ProjectMember } from "@/lib/db/schema";
+import { toast } from "@/components/Toaster";
 
 export function CastBoard({
   projectId,
@@ -78,7 +79,7 @@ export function CastBoard({
     const link = `${window.location.origin}/api/invite?projectId=${projectId}&memberId=${member.id}`;
     try {
       await navigator.clipboard.writeText(link);
-      alert(`Invite link copied — send it to ${member.displayName} however you like.`);
+      toast(`Invite link copied — send it to ${member.displayName}.`);
     } catch {
       prompt("Copy this invite link:", link);
     }
