@@ -5,6 +5,7 @@ import { projects, projectMembers, assignments, roles } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
 import { CheckCircle2 } from "lucide-react";
+import { getProductionType } from "@/lib/production-types";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -81,6 +82,10 @@ export default async function ProjectPage({ params }: { params: Params }) {
         }))}
         members={members}
         assignments={projectAssignments}
+        recommendedRoleNames={
+          getProductionType(project.projectType)?.recommendedRoles
+        }
+        productionTypeLabel={getProductionType(project.projectType)?.label}
       />
     </main>
   );

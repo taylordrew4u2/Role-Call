@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Clapperboard, Plus, Calendar, Film } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import { formatDate } from "@/lib/utils";
+import { getProductionType } from "@/lib/production-types";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -82,6 +83,15 @@ export default async function DashboardPage() {
               >
                 <Card className="h-full transition-shadow hover:shadow-md cursor-pointer group-hover:border-slate-300">
                   <CardHeader>
+                    {(() => {
+                      const pt = getProductionType(project.projectType);
+                      return pt ? (
+                        <span className="inline-flex items-center gap-1 w-fit rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 mb-1">
+                          <span>{pt.emoji}</span>
+                          {pt.label}
+                        </span>
+                      ) : null;
+                    })()}
                     <CardTitle className="text-base line-clamp-2">
                       {project.title}
                     </CardTitle>

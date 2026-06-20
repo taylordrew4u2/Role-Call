@@ -14,6 +14,7 @@ export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   ownerId: text("owner_id").notNull(), // Clerk user ID
   title: text("title").notNull(),
+  projectType: text("project_type"), // social | music_video | commercial | short | feature
   shootDate: date("shoot_date"),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

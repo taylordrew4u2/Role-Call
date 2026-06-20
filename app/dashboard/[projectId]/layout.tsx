@@ -8,6 +8,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Clapperboard, ArrowLeft, Calendar } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { ProjectTabs } from "@/components/ProjectTabs";
+import { getProductionType } from "@/lib/production-types";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -61,6 +62,15 @@ export default async function ProjectLayout({
               <Calendar className="h-4 w-4" />
               Shoot day: {formatDate(project.shootDate)}
             </span>
+            {(() => {
+              const pt = getProductionType(project.projectType);
+              return pt ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                  <span>{pt.emoji}</span>
+                  {pt.label}
+                </span>
+              ) : null;
+            })()}
           </div>
         </div>
       </div>

@@ -25,6 +25,11 @@ async function bootstrap() {
     )
   `);
 
+  // Added after initial release — safe no-op if the column already exists.
+  await db.execute(sql`
+    ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "project_type" text
+  `);
+
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "project_members" (
       "id" serial PRIMARY KEY,
