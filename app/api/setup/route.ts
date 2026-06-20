@@ -58,6 +58,64 @@ async function bootstrap() {
     )
   `);
 
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "scripts" (
+      "id" serial PRIMARY KEY,
+      "project_id" integer NOT NULL UNIQUE REFERENCES "projects"("id") ON DELETE cascade,
+      "content" text DEFAULT '' NOT NULL,
+      "file_url" text,
+      "file_name" text,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "scenes" (
+      "id" serial PRIMARY KEY,
+      "project_id" integer NOT NULL REFERENCES "projects"("id") ON DELETE cascade,
+      "scene_number" text DEFAULT '' NOT NULL,
+      "heading" text NOT NULL,
+      "int_ext" text,
+      "location" text,
+      "time_of_day" text,
+      "synopsis" text,
+      "sort_order" integer DEFAULT 0 NOT NULL
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "shoot_days" (
+      "id" serial PRIMARY KEY,
+      "project_id" integer NOT NULL REFERENCES "projects"("id") ON DELETE cascade,
+      "day_number" integer DEFAULT 1 NOT NULL,
+      "shoot_date" date,
+      "location" text,
+      "call_time" text,
+      "notes" text,
+      "sort_order" integer DEFAULT 0 NOT NULL
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "shots" (
+      "id" serial PRIMARY KEY,
+      "project_id" integer NOT NULL REFERENCES "projects"("id") ON DELETE cascade,
+      "scene_id" integer REFERENCES "scenes"("id") ON DELETE set null,
+      "shoot_day_id" integer REFERENCES "shoot_days"("id") ON DELETE set null,
+      "shot_number" text DEFAULT '' NOT NULL,
+      "description" text DEFAULT '' NOT NULL,
+      "shot_size" text,
+      "angle" text,
+      "movement" text,
+      "lens" text,
+      "equipment" text,
+      "cast_notes" text,
+      "status" text DEFAULT 'planned' NOT NULL,
+      "sort_order" integer DEFAULT 0 NOT NULL,
+      "notes" text
+    )
+  `);
+
   await seedRoles();
 }
 
