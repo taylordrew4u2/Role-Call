@@ -1,3 +1,4 @@
+import { isNull } from "drizzle-orm";
 import { db } from "./index";
 import { roles } from "./schema";
 
@@ -288,7 +289,8 @@ const SEED_ROLES = [
  * Safe to call multiple times — won't duplicate data.
  */
 export async function seedRoles() {
-  const existing = await db.select().from(roles);
+  // Only the global templates (project_id IS NULL) count toward seeding.
+  const existing = await db.select().from(roles).where(isNull(roles.projectId));
   if (existing.length > 0) {
     console.log(`Roles already seeded (${existing.length} found). Skipping.`);
     return;

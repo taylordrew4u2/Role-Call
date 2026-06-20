@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { projects, assignments, roles } from "@/lib/db/schema";
+import { projects, assignments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { getProjectRoles } from "@/lib/db/project-roles";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -64,8 +65,8 @@ export async function POST(
     3: member3Id,
   };
 
-  // Load all roles
-  const allRoles = await db.select().from(roles);
+  // Load this project's roles (global templates + custom, minus hidden)
+  const allRoles = await getProjectRoles(id);
 
   // Delete existing assignments for this project
   await db.delete(assignments).where(eq(assignments.projectId, id));

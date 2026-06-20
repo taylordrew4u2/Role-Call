@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, FileText, Clapperboard, CalendarDays } from "lucide-react";
+import { Users, FileText, Clapperboard, CalendarDays, Drama } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ProjectTabs({ projectId }: { projectId: number }) {
@@ -11,6 +11,7 @@ export function ProjectTabs({ projectId }: { projectId: number }) {
 
   const tabs = [
     { href: base, label: "Roles", icon: Users },
+    { href: `${base}/cast`, label: "Cast", icon: Drama },
     { href: `${base}/script`, label: "Script", icon: FileText },
     { href: `${base}/shots`, label: "Shot List", icon: Clapperboard },
     { href: `${base}/schedule`, label: "Schedule", icon: CalendarDays },

@@ -35,20 +35,39 @@ async function bootstrap() {
       "id" serial PRIMARY KEY,
       "project_id" integer NOT NULL REFERENCES "projects"("id") ON DELETE cascade,
       "clerk_user_id" text,
-      "email" text NOT NULL,
+      "email" text,
       "display_name" text NOT NULL,
+      "kind" text DEFAULT 'crew' NOT NULL,
+      "character" text,
       "status" text DEFAULT 'invited' NOT NULL
     )
   `);
+  // Added after initial release — safe no-ops if already applied.
+  await db.execute(sql`ALTER TABLE "project_members" ALTER COLUMN "email" DROP NOT NULL`);
+  await db.execute(sql`ALTER TABLE "project_members" ADD COLUMN IF NOT EXISTS "kind" text DEFAULT 'crew' NOT NULL`);
+  await db.execute(sql`ALTER TABLE "project_members" ADD COLUMN IF NOT EXISTS "character" text`);
 
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "roles" (
       "id" serial PRIMARY KEY,
-      "name" text NOT NULL UNIQUE,
+      "project_id" integer REFERENCES "projects"("id") ON DELETE cascade,
+      "name" text NOT NULL,
       "category" text NOT NULL,
       "duties" jsonb DEFAULT '[]'::jsonb NOT NULL,
       "is_critical" boolean DEFAULT false NOT NULL,
       "sort_order" integer DEFAULT 0 NOT NULL
+    )
+  `);
+  // Allow per-project custom roles: roles are no longer globally unique by name.
+  await db.execute(sql`ALTER TABLE "roles" ADD COLUMN IF NOT EXISTS "project_id" integer REFERENCES "projects"("id") ON DELETE cascade`);
+  await db.execute(sql`ALTER TABLE "roles" DROP CONSTRAINT IF EXISTS "roles_name_unique"`);
+  await db.execute(sql`ALTER TABLE "roles" DROP CONSTRAINT IF EXISTS "roles_name_key"`);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "project_hidden_roles" (
+      "id" serial PRIMARY KEY,
+      "project_id" integer NOT NULL REFERENCES "projects"("id") ON DELETE cascade,
+      "role_id" integer NOT NULL REFERENCES "roles"("id") ON DELETE cascade
     )
   `);
 

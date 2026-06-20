@@ -11,6 +11,16 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AssignModal } from "@/components/AssignModal";
 import { DutiesModal } from "@/components/DutiesModal";
@@ -23,6 +33,8 @@ import {
   CheckCircle2,
   Circle,
   Zap,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -39,7 +51,7 @@ interface Role {
 interface Member {
   id: number;
   displayName: string;
-  email: string;
+  email: string | null;
   status: string;
 }
 
@@ -79,16 +91,17 @@ export function RoleAssignmentBoard({
   const [assignments, setAssignments] =
     useState<Assignment[]>(initialAssignments);
   const [members, setMembers] = useState<Member[]>(initialMembers);
+  const [roleList, setRoleList] = useState<Role[]>(roles);
 
   // "Recommended only" filter, driven by the project's production type.
   const recommendedSet = new Set(recommendedRoleNames ?? []);
   const hasRecommended =
-    recommendedSet.size > 0 && recommendedSet.size < roles.length;
+    recommendedSet.size > 0 && recommendedSet.size < roleList.length;
   const [recommendedOnly, setRecommendedOnly] = useState(hasRecommended);
   const visibleRoles =
     recommendedOnly && hasRecommended
-      ? roles.filter((r) => recommendedSet.has(r.name))
-      : roles;
+      ? roleList.filter((r) => recommendedSet.has(r.name))
+      : roleList;
 
   // Modal state
   const [assignModal, setAssignModal] = useState<{
@@ -101,6 +114,48 @@ export function RoleAssignmentBoard({
   }>({ open: false, role: null });
   const [inviteOpen, setInviteOpen] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [addRoleOpen, setAddRoleOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleCategory, setNewRoleCategory] = useState("");
+  const [newRoleCritical, setNewRoleCritical] = useState(false);
+  const [savingRole, setSavingRole] = useState(false);
+
+  async function handleAddRole() {
+    if (!newRoleName.trim()) return;
+    setSavingRole(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newRoleName,
+          category: newRoleCategory,
+          isCritical: newRoleCritical,
+        }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setRoleList((rs) => [...rs, { ...created, duties: created.duties ?? [] }]);
+        setNewRoleName("");
+        setNewRoleCategory("");
+        setNewRoleCritical(false);
+        setAddRoleOpen(false);
+      }
+    } finally {
+      setSavingRole(false);
+    }
+  }
+
+  async function handleRemoveRole(role: Role) {
+    if (!confirm(`Remove "${role.name}" from this project?`)) return;
+    const res = await fetch(`/api/projects/${projectId}/roles/${role.id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setRoleList((rs) => rs.filter((r) => r.id !== role.id));
+      setAssignments((as) => as.filter((a) => a.roleId !== role.id));
+    }
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -120,7 +175,7 @@ export function RoleAssignmentBoard({
   }));
 
   // Critical unassigned roles
-  const criticalUnassigned = roles.filter((r) => {
+  const criticalUnassigned = roleList.filter((r) => {
     if (!r.isCritical) return false;
     const a = getAssignment(r.id);
     return !a || a.assignedMemberId === null;
@@ -129,7 +184,7 @@ export function RoleAssignmentBoard({
   const assignedCount = assignments.filter(
     (a) => a.assignedMemberId !== null
   ).length;
-  const totalRoles = roles.length;
+  const totalRoles = roleList.length;
 
   // ── Assign handler ────────────────────────────────────────────────────────
 
@@ -243,7 +298,7 @@ export function RoleAssignmentBoard({
                 {productionTypeLabel ? ` for a ${productionTypeLabel.toLowerCase()}` : ""}.
               </>
             ) : (
-              <>Showing all {roles.length} roles.</>
+              <>Showing all {roleList.length} roles.</>
             )}
           </span>
           <Button
@@ -282,12 +337,72 @@ export function RoleAssignmentBoard({
               <Zap className="h-3.5 w-3.5 text-amber-500" />
               {loadingTemplate ? "Loading…" : "Load Lean 8-Person Template"}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddRoleOpen(true)}
+              className="gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Role
+            </Button>
             <Button size="sm" onClick={() => setInviteOpen(true)}>
               Invite Member
             </Button>
           </div>
         )}
       </div>
+
+      {/* Add role dialog */}
+      <Dialog open={addRoleOpen} onOpenChange={setAddRoleOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" /> Add a Role
+            </DialogTitle>
+            <DialogDescription>
+              Add a custom role to this project. It won&apos;t affect your other
+              projects.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="role-name">Role name</Label>
+              <Input
+                id="role-name"
+                placeholder="e.g. Drone Operator"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="role-cat">Department</Label>
+              <Input
+                id="role-cat"
+                placeholder="e.g. Camera"
+                value={newRoleCategory}
+                onChange={(e) => setNewRoleCategory(e.target.value)}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={newRoleCritical}
+                onChange={(e) => setNewRoleCritical(e.target.checked)}
+              />
+              Mark as a critical role
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddRoleOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddRole} disabled={savingRole || !newRoleName.trim()}>
+              {savingRole ? "Adding…" : "Add Role"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Main layout: table + sidebar */}
       <div className="flex flex-col lg:flex-row gap-4 items-start">
@@ -398,6 +513,15 @@ export function RoleAssignmentBoard({
                               }
                             >
                               {isAssigned ? "Reassign" : "Assign"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRemoveRole(role)}
+                              title="Remove role from this project"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                              <span className="sr-only">Remove role</span>
                             </Button>
                           </div>
                         </TableCell>
