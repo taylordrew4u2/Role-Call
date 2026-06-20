@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { projects, projectMembers } from "@/lib/db/schema";
+import { getAppUrl } from "@/lib/get-app-url";
 import { eq } from "drizzle-orm";
 
 type Params = Promise<{ projectId: string }>;
@@ -65,7 +66,10 @@ export async function POST(
     .returning();
 
   // Send invitation email via Resend (lazily imported to avoid build-time errors)
-  const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/invite?projectId=${id}&memberId=${member.id}`;
+  const joinUrl = new URL(
+    `/api/invite?projectId=${id}&memberId=${member.id}`,
+    getAppUrl(request)
+  ).toString();
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
     try {

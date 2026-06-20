@@ -45,7 +45,7 @@ Fill in your credentials:
 - **Clerk**: Create a project at [clerk.com](https://clerk.com) and copy the publishable + secret keys
 - **Vercel Postgres**: Add a Postgres database in your Vercel project dashboard; copy the connection strings
 - **Resend**: Get an API key at [resend.com](https://resend.com)
-- **`NEXT_PUBLIC_APP_URL`**: Set to `http://localhost:3000` for development
+- **`NEXT_PUBLIC_APP_URL`**: Set to your local URL for development; on Vercel, the app falls back to `VERCEL_URL` automatically
 
 ### 3. Push the database schema
 

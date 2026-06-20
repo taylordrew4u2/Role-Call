@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getAppUrl } from "@/lib/get-app-url";
 import { projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -33,7 +34,5 @@ export async function GET(request: Request) {
     .where(eq(projectMembers.id, memberId));
 
   // Redirect to the project page (user must sign in to view)
-  return Response.redirect(
-    new URL(`/dashboard/${projectId}`, process.env.NEXT_PUBLIC_APP_URL ?? request.url)
-  );
+  return Response.redirect(new URL(`/dashboard/${projectId}`, getAppUrl(request)));
 }
