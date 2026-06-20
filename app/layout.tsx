@@ -25,8 +25,8 @@ export default function RootLayout({
         <ClerkProvider>
           <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3">
             <Show when="signed-out">
-              <SignInButton />
-              <SignUpButton />
+              <SignInButton fallbackRedirectUrl="/dashboard" />
+              <SignUpButton fallbackRedirectUrl="/dashboard" />
             </Show>
             <Show when="signed-in">
               <UserButton />
