@@ -58,6 +58,8 @@ interface RoleAssignmentBoardProps {
   roles: Role[];
   members: Member[];
   assignments: Assignment[];
+  recommendedRoleNames?: string[];
+  productionTypeLabel?: string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -69,12 +71,24 @@ export function RoleAssignmentBoard({
   roles,
   members: initialMembers,
   assignments: initialAssignments,
+  recommendedRoleNames,
+  productionTypeLabel,
 }: RoleAssignmentBoardProps) {
   const isOwner = currentUserId === ownerId;
 
   const [assignments, setAssignments] =
     useState<Assignment[]>(initialAssignments);
   const [members, setMembers] = useState<Member[]>(initialMembers);
+
+  // "Recommended only" filter, driven by the project's production type.
+  const recommendedSet = new Set(recommendedRoleNames ?? []);
+  const hasRecommended =
+    recommendedSet.size > 0 && recommendedSet.size < roles.length;
+  const [recommendedOnly, setRecommendedOnly] = useState(hasRecommended);
+  const visibleRoles =
+    recommendedOnly && hasRecommended
+      ? roles.filter((r) => recommendedSet.has(r.name))
+      : roles;
 
   // Modal state
   const [assignModal, setAssignModal] = useState<{
@@ -215,6 +229,33 @@ export function RoleAssignmentBoard({
         </Alert>
       )}
 
+      {/* Recommended-roles filter banner */}
+      {hasRecommended && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm">
+          <span className="text-slate-600">
+            {recommendedOnly ? (
+              <>
+                Showing the{" "}
+                <span className="font-medium text-slate-900">
+                  {recommendedSet.size} roles
+                </span>{" "}
+                recommended
+                {productionTypeLabel ? ` for a ${productionTypeLabel.toLowerCase()}` : ""}.
+              </>
+            ) : (
+              <>Showing all {roles.length} roles.</>
+            )}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRecommendedOnly((v) => !v)}
+          >
+            {recommendedOnly ? "Show all roles" : "Show recommended only"}
+          </Button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3 text-sm text-slate-600">
@@ -266,7 +307,7 @@ export function RoleAssignmentBoard({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {roles
+              {visibleRoles
                 .sort((a, b) => a.sortOrder - b.sortOrder)
                 .map((role) => {
                   const assignment = getAssignment(role.id);
