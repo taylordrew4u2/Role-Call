@@ -61,6 +61,74 @@ export const assignments = pgTable("assignments", {
   notes: text("notes"),
 });
 
+// The screenplay for a project — one per project. Either typed/pasted text,
+// an uploaded file (Vercel Blob URL), or both.
+export const scripts = pgTable("scripts", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id")
+    .notNull()
+    .unique()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  content: text("content").notNull().default(""),
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Scenes broken out of the script (e.g. "1A — INT. KITCHEN — DAY")
+export const scenes = pgTable("scenes", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  sceneNumber: text("scene_number").notNull().default(""),
+  heading: text("heading").notNull(),
+  intExt: text("int_ext"), // INT | EXT | INT/EXT
+  location: text("location"),
+  timeOfDay: text("time_of_day"), // DAY | NIGHT | etc.
+  synopsis: text("synopsis"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// Shooting days for scheduling
+export const shootDays = pgTable("shoot_days", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  dayNumber: integer("day_number").notNull().default(1),
+  shootDate: date("shoot_date"),
+  location: text("location"),
+  callTime: text("call_time"),
+  notes: text("notes"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// Individual shots in the shot list, optionally tied to a scene and a shoot day
+export const shots = pgTable("shots", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  sceneId: integer("scene_id").references(() => scenes.id, {
+    onDelete: "set null",
+  }),
+  shootDayId: integer("shoot_day_id").references(() => shootDays.id, {
+    onDelete: "set null",
+  }),
+  shotNumber: text("shot_number").notNull().default(""),
+  description: text("description").notNull().default(""),
+  shotSize: text("shot_size"), // WS, MS, CU, etc.
+  angle: text("angle"), // eye-level, high, low, etc.
+  movement: text("movement"), // static, pan, dolly, handheld, etc.
+  lens: text("lens"),
+  equipment: text("equipment"),
+  castNotes: text("cast_notes"),
+  status: text("status").notNull().default("planned"), // planned | shot | omitted
+  sortOrder: integer("sort_order").notNull().default(0),
+  notes: text("notes"),
+});
+
 // TypeScript types derived from schema
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
@@ -69,3 +137,10 @@ export type NewProjectMember = typeof projectMembers.$inferInsert;
 export type Role = typeof roles.$inferSelect;
 export type Assignment = typeof assignments.$inferSelect;
 export type NewAssignment = typeof assignments.$inferInsert;
+export type Script = typeof scripts.$inferSelect;
+export type Scene = typeof scenes.$inferSelect;
+export type NewScene = typeof scenes.$inferInsert;
+export type ShootDay = typeof shootDays.$inferSelect;
+export type NewShootDay = typeof shootDays.$inferInsert;
+export type Shot = typeof shots.$inferSelect;
+export type NewShot = typeof shots.$inferInsert;

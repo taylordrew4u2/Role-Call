@@ -1,0 +1,74 @@
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { projects } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { UserButton } from "@clerk/nextjs";
+import { Clapperboard, ArrowLeft, Calendar } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import { ProjectTabs } from "@/components/ProjectTabs";
+
+type Params = Promise<{ projectId: string }>;
+
+export default async function ProjectLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Params;
+}) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const { projectId } = await params;
+  const id = parseInt(projectId, 10);
+  if (isNaN(id)) redirect("/dashboard");
+
+  const [project] = await db.select().from(projects).where(eq(projects.id, id));
+  if (!project) redirect("/dashboard");
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      {/* Top nav */}
+      <header className="border-b border-slate-200 bg-white px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 font-bold text-xl text-slate-900"
+          >
+            <Clapperboard className="h-6 w-6 text-red-600" />
+            <span className="hidden sm:inline">RoleCall</span>
+          </Link>
+        </div>
+        <UserButton />
+      </header>
+
+      {/* Project title */}
+      <div className="bg-white border-b border-slate-200 px-4 sm:px-6 pt-5 pb-3">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+            {project.title}
+          </h1>
+          <div className="mt-1.5 flex flex-wrap items-center gap-4 text-sm text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4" />
+              Shoot day: {formatDate(project.shootDate)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Section tabs */}
+      <ProjectTabs projectId={id} />
+
+      {children}
+    </div>
+  );
+}
