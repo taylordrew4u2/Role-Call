@@ -24,8 +24,3 @@ export async function getProjectRoles(projectId: number): Promise<Role[]> {
     .filter((r) => !hiddenIds.has(r.id))
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }
-
-/** True if the role is a global template (shared, not owned by a project). */
-export function isGlobalRole(role: { projectId: number | null }) {
-  return role.projectId === null;
-}
