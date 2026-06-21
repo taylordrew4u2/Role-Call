@@ -36,13 +36,14 @@ import {
   Wand2,
   CheckSquare,
   Square,
+  Users,
 } from "lucide-react";
 import type { Scene, Shot } from "@/lib/db/schema";
 import { parseShotLines } from "@/lib/parse-shots";
 import { suggestShotFields } from "@/lib/suggest-shot";
 import { toast } from "@/components/Toaster";
 
-type ViewMode = "scene" | "table" | "cards";
+type ViewMode = "scene" | "actor" | "table" | "cards";
 
 type Selection = {
   mode: boolean;
@@ -88,6 +89,41 @@ function statusBadge(status: string) {
   if (status === "shot") return <Badge className="bg-emerald-600">Shot</Badge>;
   if (status === "omitted") return <Badge variant="secondary">Omitted</Badge>;
   return <Badge variant="outline">Planned</Badge>;
+}
+
+const NO_CAST = "Unassigned";
+
+// Split a free-text cast note ("John, Mary & extras") into individual names so
+// a shot can appear under every actor it features.
+function castNames(castNotes: string | null): string[] {
+  if (!castNotes) return [];
+  return castNotes
+    .split(/,|&|\band\b|\/|\+/i)
+    .map((n) => n.trim())
+    .filter(Boolean);
+}
+
+// Group shots by cast member. A shot with multiple names appears under each;
+// shots with no cast fall under "Unassigned".
+function groupShotsByCast(shots: Shot[]): { name: string; shots: Shot[] }[] {
+  const groups = new Map<string, Shot[]>();
+  for (const shot of shots) {
+    const names = castNames(shot.castNotes);
+    const keys = names.length > 0 ? names : [NO_CAST];
+    for (const key of keys) {
+      const list = groups.get(key);
+      if (list) list.push(shot);
+      else groups.set(key, [shot]);
+    }
+  }
+  // Sort actors alphabetically, with "Unassigned" last.
+  return [...groups.entries()]
+    .sort(([a], [b]) => {
+      if (a === NO_CAST) return 1;
+      if (b === NO_CAST) return -1;
+      return a.localeCompare(b);
+    })
+    .map(([name, shots]) => ({ name, shots }));
 }
 
 export function ShotListBoard({
@@ -443,6 +479,7 @@ export function ShotListBoard({
           {(
             [
               { id: "scene", label: "By Scene", icon: List },
+              { id: "actor", label: "By Cast", icon: Users },
               { id: "table", label: "Table", icon: Table2 },
               { id: "cards", label: "Cards", icon: LayoutGrid },
             ] as { id: ViewMode; label: string; icon: typeof List }[]
@@ -540,6 +577,35 @@ export function ShotListBoard({
             </Button>
           )}
         </>
+      )}
+
+      {/* By Cast view — shots grouped by actor / character */}
+      {viewMode === "actor" && hasShots && (
+        <div className="space-y-6">
+          {groupShotsByCast(shots).map((group) => (
+            <div key={group.name} className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <Users className="h-4 w-4 text-slate-400" />
+                <h3 className="font-semibold text-slate-900">
+                  {group.name === NO_CAST ? "Unassigned (no cast)" : group.name}
+                </h3>
+                <span className="text-xs text-slate-400">
+                  {group.shots.length} shot{group.shots.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <FlatShotTable
+                shots={group.shots}
+                sceneName={sceneName}
+                isOwner={isOwner}
+                selection={selection}
+                onEditShot={(shot) =>
+                  setShotDialog({ open: true, shot, sceneId: shot.sceneId })
+                }
+                onDeleteShot={deleteShot}
+              />
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Flat table view */}
