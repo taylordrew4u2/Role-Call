@@ -98,7 +98,12 @@ export function ShotListBoard({
         return;
       }
       setScenes((s) => [...s, ...(data.scenes ?? [])]);
-      toast(`Added ${data.scenes?.length ?? 0} scenes from the script.`);
+      setShots((s) => [...s, ...(data.shots ?? [])]);
+      const sceneCount = data.scenes?.length ?? 0;
+      const shotCount = data.shots?.length ?? 0;
+      toast(
+        `Added ${sceneCount} scene${sceneCount === 1 ? "" : "s"} and ${shotCount} shot${shotCount === 1 ? "" : "s"} from the script.`
+      );
     } catch {
       toast("Network error. Please try again.", "error");
     } finally {
@@ -264,7 +269,7 @@ export function ShotListBoard({
               className="gap-1.5"
             >
               <Wand2 className="h-4 w-4" />
-              {generating ? "Reading script…" : "Scenes from script"}
+              {generating ? "Reading script…" : "Scenes & shots from script"}
             </Button>
             <Button
               variant="outline"

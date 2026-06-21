@@ -5,6 +5,8 @@ export interface ParsedScene {
   location: string;
   timeOfDay: string;
   synopsis: string;
+  /** Action / description lines that belong to this scene, used to infer shots. */
+  action: string[];
 }
 
 const TIME_WORDS = [
@@ -21,11 +23,23 @@ const TIME_WORDS = [
   "SAME",
   "SUNSET",
   "SUNRISE",
+  "NOON",
+  "MIDNIGHT",
+  "MAGIC HOUR",
 ];
+
+// Words that strongly imply an exterior even without an INT/EXT prefix.
+const EXTERIOR_HINTS =
+  /\b(STREET|ROAD|HIGHWAY|PARK|FOREST|WOODS|BEACH|FIELD|MOUNTAIN|ROOFTOP|ALLEY|YARD|GARDEN|PARKING|SIDEWALK|BRIDGE|RIVER|LAKE|OCEAN|DESERT|CITY|TOWN|EXTERIOR|OUTSIDE|OUTDOOR)\b/;
+const INTERIOR_HINTS =
+  /\b(ROOM|KITCHEN|OFFICE|HOUSE|APARTMENT|BEDROOM|BATHROOM|HALLWAY|LOBBY|BAR|RESTAURANT|CAR|INTERIOR|INSIDE|INDOOR|HOSPITAL|CLASSROOM|STORE|SHOP|BASEMENT|ATTIC|GARAGE)\b/;
 
 // A slug line: optional scene number, then INT/EXT, then the rest.
 const SLUG =
   /^\s*([0-9]+[A-Za-z]?)?[.)]?\s*(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\.?|EXT\.?|I\/E)\s+(.+)$/;
+
+// "SCENE 1", "SCENE 1 - ...", "SC 1" style numbered headings without INT/EXT.
+const SCENE_MARKER = /^\s*(?:SCENE|SC\.?)\s+([0-9]+[A-Za-z]?)\b[.):-]?\s*(.*)$/i;
 
 function normalizeIntExt(raw: string): string {
   const v = raw.toUpperCase().replace(/\./g, "");
@@ -34,58 +48,172 @@ function normalizeIntExt(raw: string): string {
   return "INT";
 }
 
+/** Split "LOCATION - TIME" on the last dash, inferring the time-of-day. */
+function splitLocationTime(rest: string): { location: string; timeOfDay: string } {
+  let location = rest.trim();
+  let timeOfDay = "";
+  const dash = Math.max(
+    rest.lastIndexOf(" - "),
+    rest.lastIndexOf(" – "),
+    rest.lastIndexOf(" — ")
+  );
+  if (dash !== -1) {
+    const tail = rest.slice(dash + 3).trim();
+    const tailUpper = tail.toUpperCase();
+    if (TIME_WORDS.some((t) => tailUpper.startsWith(t)) || tail.length <= 18) {
+      location = rest.slice(0, dash).trim();
+      timeOfDay = tail;
+    }
+  }
+  return { location, timeOfDay: timeOfDay.replace(/[.)]$/, "") };
+}
+
+/** Guess INT vs EXT from the location text when there's no explicit prefix. */
+function inferIntExt(text: string): string {
+  const u = text.toUpperCase();
+  if (EXTERIOR_HINTS.test(u)) return "EXT";
+  if (INTERIOR_HINTS.test(u)) return "INT";
+  return "";
+}
+
+interface HeadingMatch {
+  sceneNumber: string;
+  heading: string;
+  intExt: string;
+  location: string;
+  timeOfDay: string;
+}
+
 /**
- * Parse screenplay text into scenes by detecting slug lines like
- * "INT. KITCHEN - DAY". Pure text parsing — no external services.
+ * Try to read a single line as a scene heading using progressively looser
+ * rules. Returns null only when the line clearly isn't a heading (so the
+ * caller can treat it as action).
+ */
+function matchHeading(line: string): HeadingMatch | null {
+  // 1) Proper slug line: "INT. KITCHEN - DAY"
+  const slug = line.match(SLUG);
+  if (slug) {
+    const [, num, ie, rest] = slug;
+    const { location, timeOfDay } = splitLocationTime(rest);
+    return {
+      sceneNumber: (num ?? "").trim(),
+      heading: line.replace(/\s+/g, " "),
+      intExt: normalizeIntExt(ie),
+      location,
+      timeOfDay,
+    };
+  }
+
+  // 2) "SCENE 1 - LOCATION" marker without INT/EXT.
+  const marker = line.match(SCENE_MARKER);
+  if (marker) {
+    const [, num] = marker;
+    // Strip any leading separator left after the scene number ("- ", ": ", …).
+    const rest = marker[2].replace(/^[\s\-–—:.]+/, "");
+    const { location, timeOfDay } = splitLocationTime(rest);
+    return {
+      sceneNumber: num.trim(),
+      heading: line.replace(/\s+/g, " "),
+      intExt: inferIntExt(rest),
+      location: location || rest.trim(),
+      timeOfDay,
+    };
+  }
+
+  // 3) Loose ALL-CAPS heading like "KITCHEN - DAY" or "ROOFTOP - NIGHT".
+  //    Require a time word or a dash so we don't mistake a character cue
+  //    ("JOHN") for a scene heading.
+  const letters = line.replace(/[^A-Za-z]/g, "");
+  const isUpper = letters.length > 0 && line === line.toUpperCase();
+  const hasDash = /\s[-–—]\s/.test(line);
+  const upper = line.toUpperCase();
+  const endsWithTime = TIME_WORDS.some((t) => upper.endsWith(t));
+  if (isUpper && line.length <= 60 && (hasDash || endsWithTime)) {
+    const { location, timeOfDay } = splitLocationTime(line);
+    return {
+      sceneNumber: "",
+      heading: line.replace(/\s+/g, " "),
+      intExt: inferIntExt(line),
+      location,
+      timeOfDay,
+    };
+  }
+
+  return null;
+}
+
+/** Build scenes by chunking on blank lines when no headings can be detected. */
+function chunkFallback(lines: string[]): ParsedScene[] {
+  const paragraphs: string[][] = [];
+  let current: string[] = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      if (current.length) paragraphs.push(current);
+      current = [];
+    } else {
+      current.push(line);
+    }
+  }
+  if (current.length) paragraphs.push(current);
+
+  if (paragraphs.length === 0) return [];
+
+  return paragraphs.map((para, i) => {
+    const first = para[0];
+    const { location, timeOfDay } = splitLocationTime(first);
+    return {
+      sceneNumber: String(i + 1),
+      heading: first.slice(0, 80),
+      intExt: inferIntExt(para.join(" ")),
+      location: location.slice(0, 80),
+      timeOfDay,
+      synopsis: para.join(" ").slice(0, 200),
+      action: para,
+    };
+  });
+}
+
+/**
+ * Parse screenplay text into scenes. Designed to always return at least one
+ * scene whenever the input contains any text — it falls back from strict
+ * slug lines to looser headings to plain paragraph chunking, inferring as much
+ * structure as it can rather than refusing to parse.
  */
 export function parseScenesFromScript(text: string): ParsedScene[] {
   const lines = text.split(/\r?\n/);
   const scenes: ParsedScene[] = [];
   let auto = 0;
+  let current: ParsedScene | null = null;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    const m = line.match(SLUG);
-    if (!m) continue;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
 
-    const [, num, ie, rest] = m;
-    // Split "LOCATION - TIME" on the last dash.
-    let location = rest.trim();
-    let timeOfDay = "";
-    const dash = Math.max(
-      rest.lastIndexOf(" - "),
-      rest.lastIndexOf(" – "),
-      rest.lastIndexOf(" — ")
-    );
-    if (dash !== -1) {
-      const tail = rest.slice(dash + 3).trim();
-      const tailUpper = tail.toUpperCase();
-      if (TIME_WORDS.some((t) => tailUpper.startsWith(t)) || tail.length <= 18) {
-        location = rest.slice(0, dash).trim();
-        timeOfDay = tail;
-      }
+    const head = matchHeading(line);
+    if (head) {
+      auto += 1;
+      current = {
+        sceneNumber: head.sceneNumber || String(auto),
+        heading: head.heading,
+        intExt: head.intExt,
+        location: head.location,
+        timeOfDay: head.timeOfDay,
+        synopsis: "",
+        action: [],
+      };
+      scenes.push(current);
+      continue;
     }
 
-    // First following non-empty, non-slug line becomes the synopsis.
-    let synopsis = "";
-    for (let j = i + 1; j < lines.length; j++) {
-      const next = lines[j].trim();
-      if (!next) continue;
-      if (next.match(SLUG)) break;
-      synopsis = next.slice(0, 200);
-      break;
+    if (current) {
+      if (!current.synopsis) current.synopsis = line.slice(0, 200);
+      current.action.push(line);
     }
-
-    auto += 1;
-    scenes.push({
-      sceneNumber: (num ?? String(auto)).trim(),
-      heading: line.replace(/\s+/g, " "),
-      intExt: normalizeIntExt(ie),
-      location,
-      timeOfDay: timeOfDay.replace(/[.)]$/, ""),
-      synopsis,
-    });
   }
 
-  return scenes;
+  if (scenes.length > 0) return scenes;
+
+  // No headings at all — infer scenes from paragraphs so we never give up.
+  return chunkFallback(lines);
 }

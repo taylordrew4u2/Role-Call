@@ -21,13 +21,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AssignModal } from "@/components/AssignModal";
 import { DutiesModal } from "@/components/DutiesModal";
 import { TeamSidebar } from "@/components/TeamSidebar";
 import { InviteModal } from "@/components/InviteModal";
 import {
-  AlertTriangle,
   BookOpen,
   Users2,
   CheckCircle2,
@@ -214,13 +212,6 @@ export function RoleAssignmentBoard({
     roleCount: assignments.filter((a) => a.assignedMemberId === m.id).length,
   }));
 
-  // Critical unassigned roles
-  const criticalUnassigned = roleList.filter((r) => {
-    if (!r.isCritical) return false;
-    const a = getAssignment(r.id);
-    return !a || a.assignedMemberId === null;
-  });
-
   const assignedCount = assignments.filter(
     (a) => a.assignedMemberId !== null
   ).length;
@@ -307,23 +298,6 @@ export function RoleAssignmentBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Critical warning banner */}
-      {criticalUnassigned.length > 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>
-            {criticalUnassigned.length} Critical Role
-            {criticalUnassigned.length > 1 ? "s" : ""} Unassigned
-          </AlertTitle>
-          <AlertDescription>
-            <span className="font-medium">
-              {criticalUnassigned.map((r) => r.name).join(", ")}
-            </span>{" "}
-            must be filled before shoot day.
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Recommended-roles filter banner */}
       {hasRecommended && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm">
