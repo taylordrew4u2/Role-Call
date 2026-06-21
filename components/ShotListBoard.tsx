@@ -34,6 +34,8 @@ import {
   Copy,
   Printer,
   Wand2,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import type { Scene, Shot } from "@/lib/db/schema";
 import { parseShotLines } from "@/lib/parse-shots";
@@ -41,6 +43,36 @@ import { suggestShotFields } from "@/lib/suggest-shot";
 import { toast } from "@/components/Toaster";
 
 type ViewMode = "scene" | "table" | "cards";
+
+type Selection = {
+  mode: boolean;
+  selected: Set<number>;
+  toggle: (id: number) => void;
+};
+
+// A checkbox cell shown in select mode.
+function SelectBox({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className="text-slate-500 hover:text-slate-900"
+      aria-label={checked ? "Deselect shot" : "Select shot"}
+    >
+      {checked ? (
+        <CheckSquare className="h-4 w-4 text-slate-900" />
+      ) : (
+        <Square className="h-4 w-4" />
+      )}
+    </button>
+  );
+}
 
 const SHOT_SIZES = ["", "EWS", "WS", "MWS", "MS", "MCU", "CU", "ECU", "OTS", "POV", "Insert"];
 const ANGLES = ["", "Eye-level", "High", "Low", "Dutch", "Overhead", "Worm's-eye"];
@@ -83,15 +115,33 @@ export function ShotListBoard({
   }>({ open: false, shot: null, sceneId: null });
   const [viewMode, setViewMode] = useState<ViewMode>("scene");
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  // ---- Mass selection ----
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   const api = `/api/projects/${projectId}`;
 
-  // ---- Build scenes from the saved script (local text parsing, no cost) ----
-  async function generateScenesFromScript() {
+  // ---- Build scenes + shots from the saved script (local parsing, no cost) ----
+  async function generateScenesFromScript(mode: "action" | "dialogue" | "both") {
     setGenerating(true);
     try {
-      const res = await fetch(`${api}/scenes/from-script`, { method: "POST" });
+      const res = await fetch(`${api}/scenes/from-script`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      });
       const data = await res.json();
       if (!res.ok) {
         toast(data.error ?? "Couldn't read the script.", "error");
@@ -104,6 +154,7 @@ export function ShotListBoard({
       toast(
         `Added ${sceneCount} scene${sceneCount === 1 ? "" : "s"} and ${shotCount} shot${shotCount === 1 ? "" : "s"} from the script.`
       );
+      setGenerateOpen(false);
     } catch {
       toast("Network error. Please try again.", "error");
     } finally {
@@ -248,6 +299,47 @@ export function ShotListBoard({
     if (res.ok) setShots((s) => s.filter((x) => x.id !== shot.id));
   }
 
+  // ---- Mass delete ----
+  async function deleteSelectedShots() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} selected shot${ids.length === 1 ? "" : "s"}?`)) return;
+    const res = await fetch(`${api}/shots/bulk`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (res.ok) {
+      const removed = new Set(ids);
+      setShots((s) => s.filter((x) => !removed.has(x.id)));
+      setSelected(new Set());
+      setSelectMode(false);
+      toast(`Deleted ${ids.length} shot${ids.length === 1 ? "" : "s"}.`);
+    } else {
+      toast("Couldn't delete the selected shots.", "error");
+    }
+  }
+
+  async function clearAllShots() {
+    if (shots.length === 0) return;
+    if (!confirm(`Delete all ${shots.length} shots? This can't be undone.`)) return;
+    const res = await fetch(`${api}/shots/bulk`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    });
+    if (res.ok) {
+      setShots([]);
+      setSelected(new Set());
+      setSelectMode(false);
+      toast("All shots deleted.");
+    } else {
+      toast("Couldn't delete the shots.", "error");
+    }
+  }
+
+  const selection = { mode: selectMode, selected, toggle: toggleSelected };
+
   const unlinkedShots = shots.filter((s) => s.sceneId === null);
 
   const hasShots = shots.length > 0;
@@ -264,7 +356,7 @@ export function ShotListBoard({
             <Button
               variant="outline"
               size="sm"
-              onClick={generateScenesFromScript}
+              onClick={() => setGenerateOpen(true)}
               disabled={generating}
               className="gap-1.5"
             >
@@ -279,12 +371,71 @@ export function ShotListBoard({
             >
               <ClipboardPaste className="h-4 w-4" /> Paste shots
             </Button>
+            {hasShots && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectMode((m) => !m);
+                  setSelected(new Set());
+                }}
+                className="gap-1.5"
+              >
+                <CheckSquare className="h-4 w-4" />
+                {selectMode ? "Done selecting" : "Select"}
+              </Button>
+            )}
             <Button size="sm" onClick={() => setSceneDialog({ open: true, scene: null })}>
               <Plus className="h-4 w-4 mr-1" /> Add Scene
             </Button>
           </div>
         )}
       </div>
+
+      {/* Mass-selection action bar */}
+      {isOwner && selectMode && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm print:hidden">
+          <div className="flex items-center gap-3">
+            <span className="font-medium text-slate-700">
+              {selected.size} selected
+            </span>
+            <button
+              onClick={() => setSelected(new Set(shots.map((s) => s.id)))}
+              className="text-slate-600 hover:text-slate-900 hover:underline"
+            >
+              Select all ({shots.length})
+            </button>
+            {selected.size > 0 && (
+              <button
+                onClick={() => setSelected(new Set())}
+                className="text-slate-600 hover:text-slate-900 hover:underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={deleteSelectedShots}
+              disabled={selected.size === 0}
+              className="gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-red-600" />
+              Delete {selected.size > 0 ? selected.size : ""} selected
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearAllShots}
+              className="gap-1.5 text-red-600"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete all
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* View switcher + export */}
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -356,6 +507,7 @@ export function ShotListBoard({
               scene={scene}
               shots={shots.filter((s) => s.sceneId === scene.id)}
               isOwner={isOwner}
+              selection={selection}
               onEditScene={() => setSceneDialog({ open: true, scene })}
               onDeleteScene={() => deleteScene(scene)}
               onAddShot={() => setShotDialog({ open: true, shot: null, sceneId: scene.id })}
@@ -369,6 +521,7 @@ export function ShotListBoard({
               scene={null}
               shots={unlinkedShots}
               isOwner={isOwner}
+              selection={selection}
               onEditScene={() => {}}
               onDeleteScene={() => {}}
               onAddShot={() => setShotDialog({ open: true, shot: null, sceneId: null })}
@@ -395,6 +548,7 @@ export function ShotListBoard({
           shots={shots}
           sceneName={sceneName}
           isOwner={isOwner}
+          selection={selection}
           onEditShot={(shot) =>
             setShotDialog({ open: true, shot, sceneId: shot.sceneId })
           }
@@ -411,6 +565,7 @@ export function ShotListBoard({
               shot={shot}
               sceneName={sceneName(shot.sceneId)}
               isOwner={isOwner}
+              selection={selection}
               onEdit={() => setShotDialog({ open: true, shot, sceneId: shot.sceneId })}
               onDelete={() => deleteShot(shot)}
             />
@@ -423,6 +578,14 @@ export function ShotListBoard({
           scenes={scenes}
           onClose={() => setBulkOpen(false)}
           onAdd={bulkAdd}
+        />
+      )}
+
+      {generateOpen && (
+        <GenerateFromScriptDialog
+          busy={generating}
+          onClose={() => setGenerateOpen(false)}
+          onGenerate={generateScenesFromScript}
         />
       )}
 
@@ -449,6 +612,7 @@ function SceneCard({
   scene,
   shots,
   isOwner,
+  selection,
   onEditScene,
   onDeleteScene,
   onAddShot,
@@ -458,6 +622,7 @@ function SceneCard({
   scene: Scene | null;
   shots: Shot[];
   isOwner: boolean;
+  selection: Selection;
   onEditScene: () => void;
   onDeleteScene: () => void;
   onAddShot: () => void;
@@ -515,6 +680,7 @@ function SceneCard({
           <Table>
             <TableHeader>
               <TableRow>
+                {isOwner && selection.mode && <TableHead className="w-10" />}
                 <TableHead className="w-14">#</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-16">Size</TableHead>
@@ -522,12 +688,27 @@ function SceneCard({
                 <TableHead className="w-24">Move</TableHead>
                 <TableHead className="w-20">Lens</TableHead>
                 <TableHead className="w-24">Status</TableHead>
-                {isOwner && <TableHead className="w-20" />}
+                {isOwner && !selection.mode && <TableHead className="w-20" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {shots.map((shot) => (
-                <TableRow key={shot.id}>
+                <TableRow
+                  key={shot.id}
+                  className={
+                    selection.mode && selection.selected.has(shot.id)
+                      ? "bg-slate-50"
+                      : undefined
+                  }
+                >
+                  {isOwner && selection.mode && (
+                    <TableCell>
+                      <SelectBox
+                        checked={selection.selected.has(shot.id)}
+                        onChange={() => selection.toggle(shot.id)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium">{shot.shotNumber || "—"}</TableCell>
                   <TableCell className="max-w-xs">
                     {shot.description || <span className="text-slate-400">—</span>}
@@ -540,7 +721,7 @@ function SceneCard({
                   <TableCell>{shot.movement || "—"}</TableCell>
                   <TableCell>{shot.lens || "—"}</TableCell>
                   <TableCell>{statusBadge(shot.status)}</TableCell>
-                  {isOwner && (
+                  {isOwner && !selection.mode && (
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button size="sm" variant="ghost" onClick={() => onEditShot(shot)}>
@@ -798,12 +979,14 @@ function FlatShotTable({
   shots,
   sceneName,
   isOwner,
+  selection,
   onEditShot,
   onDeleteShot,
 }: {
   shots: Shot[];
   sceneName: (sceneId: number | null) => string;
   isOwner: boolean;
+  selection: Selection;
   onEditShot: (shot: Shot) => void;
   onDeleteShot: (shot: Shot) => void;
 }) {
@@ -812,6 +995,7 @@ function FlatShotTable({
       <Table>
         <TableHeader>
           <TableRow>
+            {isOwner && selection.mode && <TableHead className="w-10" />}
             <TableHead className="w-14">#</TableHead>
             <TableHead>Scene</TableHead>
             <TableHead>Description</TableHead>
@@ -820,12 +1004,27 @@ function FlatShotTable({
             <TableHead className="w-24">Move</TableHead>
             <TableHead className="w-20">Lens</TableHead>
             <TableHead className="w-24">Status</TableHead>
-            {isOwner && <TableHead className="w-20" />}
+            {isOwner && !selection.mode && <TableHead className="w-20" />}
           </TableRow>
         </TableHeader>
         <TableBody>
           {shots.map((shot) => (
-            <TableRow key={shot.id}>
+            <TableRow
+              key={shot.id}
+              className={
+                selection.mode && selection.selected.has(shot.id)
+                  ? "bg-slate-50"
+                  : undefined
+              }
+            >
+              {isOwner && selection.mode && (
+                <TableCell>
+                  <SelectBox
+                    checked={selection.selected.has(shot.id)}
+                    onChange={() => selection.toggle(shot.id)}
+                  />
+                </TableCell>
+              )}
               <TableCell className="font-medium">{shot.shotNumber || "—"}</TableCell>
               <TableCell className="text-xs text-slate-500">
                 {sceneName(shot.sceneId) || "—"}
@@ -836,7 +1035,7 @@ function FlatShotTable({
               <TableCell>{shot.movement || "—"}</TableCell>
               <TableCell>{shot.lens || "—"}</TableCell>
               <TableCell>{statusBadge(shot.status)}</TableCell>
-              {isOwner && (
+              {isOwner && !selection.mode && (
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <Button size="sm" variant="ghost" onClick={() => onEditShot(shot)}>
@@ -860,22 +1059,37 @@ function ShotCard({
   shot,
   sceneName,
   isOwner,
+  selection,
   onEdit,
   onDelete,
 }: {
   shot: Shot;
   sceneName: string;
   isOwner: boolean;
+  selection: Selection;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const specs = [shot.shotSize, shot.angle, shot.movement, shot.lens].filter(Boolean);
+  const isSelected = selection.selected.has(shot.id);
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 flex flex-col">
+    <div
+      className={
+        "rounded-lg border bg-white p-4 flex flex-col " +
+        (selection.mode && isSelected
+          ? "border-slate-900 ring-1 ring-slate-900"
+          : "border-slate-200")
+      }
+    >
       <div className="flex items-start justify-between gap-2">
-        <span className="font-semibold text-slate-900">
-          {shot.shotNumber ? `Shot ${shot.shotNumber}` : "Shot"}
-        </span>
+        <div className="flex items-center gap-2">
+          {isOwner && selection.mode && (
+            <SelectBox checked={isSelected} onChange={() => selection.toggle(shot.id)} />
+          )}
+          <span className="font-semibold text-slate-900">
+            {shot.shotNumber ? `Shot ${shot.shotNumber}` : "Shot"}
+          </span>
+        </div>
         {statusBadge(shot.status)}
       </div>
       {sceneName && <p className="text-xs text-slate-400 mt-0.5">{sceneName}</p>}
@@ -891,7 +1105,7 @@ function ShotCard({
           ))}
         </div>
       )}
-      {isOwner && (
+      {isOwner && !selection.mode && (
         <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-slate-100">
           <Button size="sm" variant="ghost" onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5" />
@@ -970,6 +1184,90 @@ function BulkAddDialog({
           </Button>
           <Button onClick={submit} disabled={saving || previewCount === 0}>
             {saving ? "Adding…" : `Add ${previewCount} shot${previewCount !== 1 ? "s" : ""}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function GenerateFromScriptDialog({
+  busy,
+  onClose,
+  onGenerate,
+}: {
+  busy: boolean;
+  onClose: () => void;
+  onGenerate: (mode: "action" | "dialogue" | "both") => Promise<void>;
+}) {
+  const [mode, setMode] = useState<"action" | "dialogue" | "both">("action");
+
+  const options: {
+    id: "action" | "dialogue" | "both";
+    title: string;
+    desc: string;
+  }[] = [
+    {
+      id: "action",
+      title: "Action coverage",
+      desc: "An establishing shot plus one shot per action beat.",
+    },
+    {
+      id: "dialogue",
+      title: "Dialogue coverage",
+      desc: "An establishing shot plus one shot for each character's line of dialogue.",
+    },
+    {
+      id: "both",
+      title: "Full coverage",
+      desc: "Establishing, action beats, and a shot per line of dialogue.",
+    },
+  ];
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Generate scenes &amp; shots from script</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          <p className="text-sm text-slate-500">
+            Reads your saved script and builds a shot list. Choose how much
+            coverage to generate:
+          </p>
+          {options.map((o) => (
+            <label
+              key={o.id}
+              className={
+                "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors " +
+                (mode === o.id
+                  ? "border-slate-900 bg-slate-50"
+                  : "border-slate-200 hover:border-slate-300")
+              }
+            >
+              <input
+                type="radio"
+                name="shot-mode"
+                value={o.id}
+                checked={mode === o.id}
+                onChange={() => setMode(o.id)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-medium text-slate-900">
+                  {o.title}
+                </span>
+                <span className="block text-xs text-slate-500">{o.desc}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={() => onGenerate(mode)} disabled={busy}>
+            {busy ? "Reading script…" : "Generate"}
           </Button>
         </DialogFooter>
       </DialogContent>

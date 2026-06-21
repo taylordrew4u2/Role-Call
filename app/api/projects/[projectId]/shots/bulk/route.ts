@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { shots } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { requireProjectOwner } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
@@ -50,4 +50,32 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
   const created = await db.insert(shots).values(rows).returning();
   return Response.json(created, { status: 201 });
+}
+
+// DELETE /api/projects/[projectId]/shots/bulk — mass-delete shots.
+// Body: { ids: number[] } to delete specific shots, or { all: true } to clear
+// every shot in the project.
+export async function DELETE(request: Request, { params }: { params: Params }) {
+  const { projectId } = await params;
+  const access = await requireProjectOwner(projectId);
+  if (!access.ok) return access.response;
+
+  const body = await request.json().catch(() => ({}));
+
+  if (body?.all === true) {
+    await db.delete(shots).where(eq(shots.projectId, access.id));
+    return Response.json({ ok: true, scope: "all" });
+  }
+
+  const ids: number[] = Array.isArray(body?.ids)
+    ? body.ids.filter((n: unknown) => Number.isInteger(n))
+    : [];
+  if (ids.length === 0) {
+    return Response.json({ error: "No shot IDs provided" }, { status: 400 });
+  }
+
+  await db
+    .delete(shots)
+    .where(and(eq(shots.projectId, access.id), inArray(shots.id, ids)));
+  return Response.json({ ok: true, deleted: ids.length });
 }

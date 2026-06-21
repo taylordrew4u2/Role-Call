@@ -3,7 +3,7 @@ import { scripts, scenes, shots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { requireProjectOwner } from "@/lib/project-access";
 import { parseScenesFromScript } from "@/lib/parse-scenes";
-import { buildShotsForScene } from "@/lib/script-to-shots";
+import { buildShotsForScene, type ShotMode } from "@/lib/script-to-shots";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -18,6 +18,8 @@ export async function POST(request: Request, { params }: { params: Params }) {
   if (!access.ok) return access.response;
 
   const body = await request.json().catch(() => ({}));
+  const mode: ShotMode =
+    body?.mode === "dialogue" || body?.mode === "both" ? body.mode : "action";
   let content: string = (body?.content ?? "").toString();
   if (!content.trim()) {
     const [script] = await db
@@ -64,7 +66,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   let shotOrder = existingShots.length;
 
   const shotRows = createdScenes.flatMap((scene, i) =>
-    buildShotsForScene(parsed[i]).map((shot) => ({
+    buildShotsForScene(parsed[i], { mode }).map((shot) => ({
       projectId: access.id,
       sceneId: scene.id,
       shotNumber: shot.shotNumber,
@@ -72,6 +74,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
       shotSize: shot.shotSize || null,
       angle: shot.angle || null,
       movement: shot.movement || null,
+      castNotes: shot.castNotes || null,
       status: "planned",
       sortOrder: shotOrder++,
     }))
