@@ -33,13 +33,6 @@ export default async function ProjectPage({ params }: { params: Params }) {
     (a) => a.assignedMemberId !== null
   ).length;
   const totalRoles = allRoles.length;
-  const criticalUnassigned = allRoles.filter((r) => {
-    if (!r.isCritical) return false;
-    const a = projectAssignments.find(
-      (a) => a.roleId === r.id && a.assignedMemberId !== null
-    );
-    return !a;
-  }).length;
 
   return (
     <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
@@ -50,12 +43,6 @@ export default async function ProjectPage({ params }: { params: Params }) {
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             {assignedCount}/{totalRoles} roles assigned
           </span>
-          {criticalUnassigned > 0 && (
-            <span className="text-red-600 font-medium">
-              ⚠ {criticalUnassigned} critical role
-              {criticalUnassigned !== 1 ? "s" : ""} unassigned
-            </span>
-          )}
         </div>
         <div className="mt-3 max-w-sm">
           <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
