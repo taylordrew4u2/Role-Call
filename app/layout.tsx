@@ -16,12 +16,15 @@ export const metadata: Metadata = {
 };
 
 async function NavAuth() {
+  let userId: string | null = null;
   try {
-    const { userId } = await auth();
-    if (userId) return <UserButton />;
+    ({ userId } = await auth());
   } catch {
     // Clerk not configured or middleware unreachable — show sign-in buttons
   }
+
+  if (userId) return <UserButton />;
+
   return (
     <>
       <SignInButton fallbackRedirectUrl="/dashboard" />
