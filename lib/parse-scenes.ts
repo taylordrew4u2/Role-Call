@@ -1,3 +1,8 @@
+export interface DialogueBeat {
+  character: string;
+  text: string;
+}
+
 export interface ParsedScene {
   sceneNumber: string;
   heading: string;
@@ -7,6 +12,8 @@ export interface ParsedScene {
   synopsis: string;
   /** Action / description lines that belong to this scene, used to infer shots. */
   action: string[];
+  /** Dialogue beats (character + line) for per-character coverage shots. */
+  dialogue: DialogueBeat[];
 }
 
 const TIME_WORDS = [
@@ -170,8 +177,34 @@ function chunkFallback(lines: string[]): ParsedScene[] {
       timeOfDay,
       synopsis: para.join(" ").slice(0, 200),
       action: para,
+      dialogue: [],
     };
   });
+}
+
+// A character cue is a short ALL-CAPS line introducing dialogue, e.g. "JOHN"
+// or "MARY (CONT'D)". It never ends with sentence punctuation, which keeps
+// action shouts like "BANG!" or labels like "SUPER:" from being mistaken for
+// a speaker.
+function isCharacterCue(line: string): boolean {
+  const compact = line.replace(/\(.*?\)/g, "").trim();
+  if (!compact) return false;
+  if (compact !== compact.toUpperCase()) return false;
+  if (!/[A-Z]/.test(compact)) return false;
+  if (/[.!?:,]$/.test(compact)) return false;
+  return compact.split(/\s+/).length <= 4 && compact.length <= 30;
+}
+
+function cueName(line: string): string {
+  return line.replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
+}
+
+// Strip leading/trailing parenthetical wrylies from a dialogue line.
+function stripWrylies(line: string): string {
+  return line
+    .replace(/^\(.*?\)\s*/, "")
+    .replace(/\s*\(.*?\)$/, "")
+    .trim();
 }
 
 /**
@@ -185,14 +218,21 @@ export function parseScenesFromScript(text: string): ParsedScene[] {
   const scenes: ParsedScene[] = [];
   let auto = 0;
   let current: ParsedScene | null = null;
+  // Tracks the speaker while we're inside a dialogue block; a blank line, a new
+  // heading, or a new cue ends the block.
+  let speaker: string | null = null;
 
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line) continue;
+    if (!line) {
+      speaker = null;
+      continue;
+    }
 
     const head = matchHeading(line);
     if (head) {
       auto += 1;
+      speaker = null;
       current = {
         sceneNumber: head.sceneNumber || String(auto),
         heading: head.heading,
@@ -201,15 +241,30 @@ export function parseScenesFromScript(text: string): ParsedScene[] {
         timeOfDay: head.timeOfDay,
         synopsis: "",
         action: [],
+        dialogue: [],
       };
       scenes.push(current);
       continue;
     }
 
-    if (current) {
-      if (!current.synopsis) current.synopsis = line.slice(0, 200);
-      current.action.push(line);
+    if (!current) continue;
+
+    // A new character cue starts (or switches) a dialogue block.
+    if (isCharacterCue(line)) {
+      speaker = cueName(line);
+      continue;
     }
+
+    // Lines under an active speaker are that character's dialogue.
+    if (speaker) {
+      const spoken = stripWrylies(line);
+      if (spoken) current.dialogue.push({ character: speaker, text: spoken });
+      continue;
+    }
+
+    // Otherwise it's plain action / description.
+    if (!current.synopsis) current.synopsis = line.slice(0, 200);
+    current.action.push(line);
   }
 
   if (scenes.length > 0) return scenes;

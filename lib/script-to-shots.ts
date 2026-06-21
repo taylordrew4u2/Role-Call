@@ -7,7 +7,14 @@ export interface GeneratedShot {
   shotSize?: string;
   angle?: string;
   movement?: string;
+  castNotes?: string;
 }
+
+// How shots are inferred from a scene:
+//   "action"   — an establishing shot + one shot per action beat (default)
+//   "dialogue" — an establishing shot + one coverage shot per line of dialogue
+//   "both"     — establishing + action beats + dialogue coverage
+export type ShotMode = "action" | "dialogue" | "both";
 
 // Letters used to number shots within a scene: A, B, C … Z, AA, AB …
 function shotLetter(index: number): string {
@@ -64,38 +71,58 @@ function establishingSize(intExt: string): string {
  * Infer a shot list for a single scene. Always returns at least one shot (an
  * establishing shot), so converting a script never produces an empty scene —
  * it makes a best-effort guess rather than refusing.
+ *
+ * `mode` controls coverage: action beats, per-character dialogue, or both.
  */
 export function buildShotsForScene(
   scene: ParsedScene,
-  opts: { maxShots?: number } = {}
+  opts: { maxShots?: number; mode?: ShotMode } = {}
 ): GeneratedShot[] {
-  const max = opts.maxShots ?? 24;
+  const max = opts.maxShots ?? 40;
+  const mode = opts.mode ?? "action";
   const shots: GeneratedShot[] = [];
-  const numFor = (i: number) => `${scene.sceneNumber || ""}${shotLetter(i)}`;
+  const numFor = () => `${scene.sceneNumber || ""}${shotLetter(shots.length)}`;
 
   // 1) Establishing shot of the location.
   const place = scene.location || scene.heading;
   shots.push({
-    shotNumber: numFor(0),
+    shotNumber: numFor(),
     description: `Establishing — ${place}`.slice(0, 200),
     shotSize: establishingSize(scene.intExt),
     angle: scene.intExt === "EXT" ? "High" : "Eye-level",
     movement: "Static",
   });
 
-  // 2) One coverage shot per action beat, with inferred camera fields.
-  const list = beats(scene.action);
-  for (let i = 0; i < list.length && shots.length < max; i++) {
-    const description = list[i];
-    const guess = suggestShotFields(description);
-    shots.push({
-      shotNumber: numFor(shots.length),
-      description: description.slice(0, 200),
-      // Fall back to a medium shot when nothing specific is implied.
-      shotSize: guess.shotSize ?? "MS",
-      angle: guess.angle ?? "Eye-level",
-      movement: guess.movement ?? "Static",
-    });
+  // 2) Coverage shots per action beat, with inferred camera fields.
+  if (mode === "action" || mode === "both") {
+    const list = beats(scene.action);
+    for (let i = 0; i < list.length && shots.length < max; i++) {
+      const description = list[i];
+      const guess = suggestShotFields(description);
+      shots.push({
+        shotNumber: numFor(),
+        description: description.slice(0, 200),
+        // Fall back to a medium shot when nothing specific is implied.
+        shotSize: guess.shotSize ?? "MS",
+        angle: guess.angle ?? "Eye-level",
+        movement: guess.movement ?? "Static",
+      });
+    }
+  }
+
+  // 3) One coverage shot per line of dialogue — a single on the speaker.
+  if (mode === "dialogue" || mode === "both") {
+    for (let i = 0; i < scene.dialogue.length && shots.length < max; i++) {
+      const { character, text } = scene.dialogue[i];
+      shots.push({
+        shotNumber: numFor(),
+        description: `${character}: “${text}”`.slice(0, 200),
+        shotSize: "CU",
+        angle: "Eye-level",
+        movement: "Static",
+        castNotes: character,
+      });
+    }
   }
 
   return shots;
@@ -104,9 +131,9 @@ export function buildShotsForScene(
 /** Infer a full shot list across every parsed scene, grouped by scene index. */
 export function buildShotsForScenes(
   scenes: ParsedScene[],
-  opts: { maxShotsPerScene?: number } = {}
+  opts: { maxShotsPerScene?: number; mode?: ShotMode } = {}
 ): GeneratedShot[][] {
   return scenes.map((s) =>
-    buildShotsForScene(s, { maxShots: opts.maxShotsPerScene })
+    buildShotsForScene(s, { maxShots: opts.maxShotsPerScene, mode: opts.mode })
   );
 }
