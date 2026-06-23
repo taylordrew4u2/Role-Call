@@ -1,14 +1,16 @@
 import { db } from "@/lib/db";
 import { scripts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getProjectAccess, requireProjectOwner } from "@/lib/project-access";
+import { getCollaboratorAccess, requireScriptWriter } from "@/lib/script-access";
+import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 
 type Params = Promise<{ projectId: string }>;
 
 // GET /api/projects/[projectId]/script — fetch the script (or empty default)
 export async function GET(_request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
-  const access = await getProjectAccess(projectId);
+  await ensureScriptSchema();
+  const access = await getCollaboratorAccess(projectId);
   if (!access.ok) return access.response;
 
   const [script] = await db
@@ -17,14 +19,22 @@ export async function GET(_request: Request, { params }: { params: Params }) {
     .where(eq(scripts.projectId, access.id));
 
   return Response.json(
-    script ?? { projectId: access.id, content: "", fileUrl: null, fileName: null }
+    script ?? {
+      projectId: access.id,
+      content: "",
+      finalContent: "",
+      fileUrl: null,
+      fileName: null,
+    }
   );
 }
 
-// PUT /api/projects/[projectId]/script — save the script text (upsert)
+// PUT /api/projects/[projectId]/script — save the editing draft (upsert).
+// Allowed for the appointed script writer (owner by default).
 export async function PUT(request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
-  const access = await requireProjectOwner(projectId);
+  await ensureScriptSchema();
+  const access = await requireScriptWriter(projectId);
   if (!access.ok) return access.response;
 
   const { content } = await request.json();
