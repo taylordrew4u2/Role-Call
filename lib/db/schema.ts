@@ -9,6 +9,16 @@ import {
   date,
 } from "drizzle-orm/pg-core";
 
+// A Series groups multiple projects that share one team. Anyone invited to the
+// series works across every project in it.
+export const series = pgTable("series", {
+  id: serial("id").primaryKey(),
+  ownerId: text("owner_id").notNull(), // Clerk user ID
+  title: text("title").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Film projects created by owners
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
@@ -17,10 +27,28 @@ export const projects = pgTable("projects", {
   projectType: text("project_type"), // social | music_video | commercial | short | feature
   shootDate: date("shoot_date"),
   description: text("description"),
-  // Clerk user ID of the appointed script writer who approves/declines suggested
-  // edits. Null means the owner is the writer.
   scriptWriterId: text("script_writer_id"),
+  // Optional parent series; null for standalone projects.
+  seriesId: integer("series_id").references(() => series.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// People invited to a whole Series. Each series member is fanned out into a
+// project_members row on every project in the series (linked via
+// project_members.series_member_id) so all existing per-project machinery
+// (roles, cast, assignments, invite links) works unchanged.
+export const seriesMembers = pgTable("series_members", {
+  id: serial("id").primaryKey(),
+  seriesId: integer("series_id")
+    .notNull()
+    .references(() => series.id, { onDelete: "cascade" }),
+  clerkUserId: text("clerk_user_id"), // Null until they accept
+  email: text("email"),
+  displayName: text("display_name").notNull(),
+  kind: text("kind").notNull().default("crew"), // crew | cast
+  status: text("status").notNull().default("invited"), // invited | active
 });
 
 // Members invited to a project (cast & crew)
@@ -29,6 +57,9 @@ export const projectMembers = pgTable("project_members", {
   projectId: integer("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
+  // Set when this row was created by fanning out a series member, so series
+  // membership changes can be kept in sync.
+  seriesMemberId: integer("series_member_id"),
   clerkUserId: text("clerk_user_id"), // Null until they accept
   email: text("email"), // optional — actors may be added without an email
   displayName: text("display_name").notNull(),
@@ -174,6 +205,10 @@ export const shots = pgTable("shots", {
 // TypeScript types derived from schema
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
+export type Series = typeof series.$inferSelect;
+export type NewSeries = typeof series.$inferInsert;
+export type SeriesMember = typeof seriesMembers.$inferSelect;
+export type NewSeriesMember = typeof seriesMembers.$inferInsert;
 export type ProjectMember = typeof projectMembers.$inferSelect;
 export type NewProjectMember = typeof projectMembers.$inferInsert;
 export type Role = typeof roles.$inferSelect;
