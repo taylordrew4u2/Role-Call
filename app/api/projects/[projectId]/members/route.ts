@@ -70,13 +70,22 @@ export async function POST(
     `/api/invite?projectId=${id}&memberId=${member.id}`,
     getAppUrl(request)
   ).toString();
+
+  // emailStatus tells the client what actually happened so it can give honest
+  // feedback (and fall back to a copyable invite link):
+  //   "sent"       — Resend accepted the message
+  //   "skipped"    — no API key configured, or no email address given
+  //   "failed"     — Resend rejected the send (e.g. unverified from-domain)
+  let emailStatus: "sent" | "skipped" | "failed" = "skipped";
+  let emailError: string | undefined;
+
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey && email?.trim()) {
     try {
       const { Resend } = await import("resend");
       const resend = new Resend(apiKey);
-      await resend.emails.send({
-        from: `RoleCall <noreply@${process.env.RESEND_FROM_DOMAIN ?? "rolecall.app"}>`,
+      const { error } = await resend.emails.send({
+        from: `RoleCall <noreply@${process.env.RESEND_FROM_DOMAIN ?? "rolecall.space"}>`,
         to: email,
         subject: `You've been invited to "${project.title}" on RoleCall`,
         html: `
@@ -97,11 +106,25 @@ export async function POST(
           </div>
         `,
       });
+      // Resend returns { data, error } and does NOT throw on a rejected send,
+      // so the error field must be checked explicitly.
+      if (error) {
+        emailStatus = "failed";
+        emailError = error.message;
+        console.error("Resend send error:", error);
+      } else {
+        emailStatus = "sent";
+      }
     } catch (err) {
-      // Email failure must not block member creation
+      // Email failure must not block member creation.
+      emailStatus = "failed";
+      emailError = err instanceof Error ? err.message : "Unknown email error";
       console.error("Resend error:", err);
     }
   }
 
-  return Response.json(member, { status: 201 });
+  return Response.json(
+    { ...member, inviteUrl: joinUrl, emailStatus, emailError },
+    { status: 201 }
+  );
 }

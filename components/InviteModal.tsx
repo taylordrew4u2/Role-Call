@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, UserPlus } from "lucide-react";
+import { Mail, UserPlus, Copy, Check } from "lucide-react";
 
 interface InviteModalProps {
   open: boolean;
@@ -32,10 +32,23 @@ export function InviteModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [inviteUrl, setInviteUrl] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Couldn't copy — select and copy the link manually.");
+    }
+  }
 
   async function handleSend() {
     setError("");
     setSuccess("");
+    setInviteUrl("");
     if (!email || !name) {
       setError("Name and email are required.");
       return;
@@ -47,11 +60,17 @@ export function InviteModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, displayName: name }),
       });
+      const d = await res.json();
       if (!res.ok) {
-        const d = await res.json();
-        setError(d.error || "Failed to send invite.");
+        setError(d.error || "Failed to add member.");
       } else {
-        setSuccess(`Invite sent to ${email}!`);
+        const sent = d.emailStatus === "sent";
+        setInviteUrl(d.inviteUrl || "");
+        setSuccess(
+          sent
+            ? `Invite emailed to ${email}.`
+            : `${name} was added, but the email couldn't be sent. Share the invite link below directly.`
+        );
         setEmail("");
         setName("");
         onInvited();
@@ -72,7 +91,8 @@ export function InviteModal({
             Invite Team Member
           </DialogTitle>
           <DialogDescription>
-            They&apos;ll receive an email with a link to join the project.
+            They&apos;ll get an email invite — or you can copy the link and send
+            it to them directly.
           </DialogDescription>
         </DialogHeader>
 
@@ -106,6 +126,34 @@ export function InviteModal({
             <p className="text-sm text-emerald-700 bg-emerald-50 rounded-md px-3 py-2">
               {success}
             </p>
+          )}
+          {inviteUrl && (
+            <div className="space-y-1.5">
+              <Label>Invite link</Label>
+              <div className="flex items-center gap-2">
+                <Input readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyLink}
+                  className="shrink-0 gap-1.5"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4 text-emerald-600" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" /> Copy
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500">
+                Anyone with this link can join the project.
+              </p>
+            </div>
           )}
         </div>
 
