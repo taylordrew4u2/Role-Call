@@ -1,17 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Clapperboard, ArrowLeft, Users2, Check } from "lucide-react";
+import { Clapperboard, ArrowLeft, Users2, Check, Layers } from "lucide-react";
 import { PRODUCTION_TYPES, getProductionType } from "@/lib/production-types";
 
 export default function NewProjectPage() {
+  return (
+    <Suspense>
+      <NewProjectForm />
+    </Suspense>
+  );
+}
+
+function NewProjectForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const seriesParam = searchParams.get("series");
+  const seriesId = seriesParam ? parseInt(seriesParam, 10) : null;
   const [step, setStep] = useState<1 | 2>(1);
   const [projectType, setProjectType] = useState<string>("");
   const [title, setTitle] = useState("");
@@ -44,6 +55,7 @@ export default function NewProjectPage() {
           shootDate: shootDate || null,
           description,
           projectType: projectType || null,
+          seriesId: seriesId && !isNaN(seriesId) ? seriesId : undefined,
         }),
       });
       if (!res.ok) {
@@ -74,6 +86,13 @@ export default function NewProjectPage() {
       </header>
 
       <main className="flex-1 w-full px-4 py-10">
+        {seriesId && !isNaN(seriesId) && (
+          <div className="max-w-2xl mx-auto mb-6 flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+            <Layers className="h-4 w-4 shrink-0" />
+            This project will be added to your series, and the whole series team
+            joins it automatically.
+          </div>
+        )}
         {/* Step indicator */}
         <div className="max-w-2xl mx-auto mb-8 flex items-center justify-center gap-3 text-sm">
           <span className={step === 1 ? "font-semibold text-slate-900" : "text-slate-400"}>

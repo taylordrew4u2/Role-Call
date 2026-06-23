@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { getAppUrl } from "@/lib/get-app-url";
 import { projectMembers } from "@/lib/db/schema";
@@ -27,10 +28,12 @@ export async function GET(request: Request) {
     return Response.json({ error: "Invite not found" }, { status: 404 });
   }
 
-  // Mark as active
+  // Mark as active, linking the signed-in Clerk account when available so the
+  // project shows up on their dashboard.
+  const { userId } = await auth();
   await db
     .update(projectMembers)
-    .set({ status: "active" })
+    .set({ status: "active", clerkUserId: userId ?? member.clerkUserId })
     .where(eq(projectMembers.id, memberId));
 
   // Redirect to the project page (user must sign in to view)
