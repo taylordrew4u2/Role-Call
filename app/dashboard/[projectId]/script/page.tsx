@@ -1,9 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { projects, scripts } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { ScriptEditor } from "@/components/ScriptEditor";
+import { projects, scripts, scriptSuggestions, projectMembers } from "@/lib/db/schema";
+import { desc, eq } from "drizzle-orm";
+import { ScriptWorkspace } from "@/components/ScriptWorkspace";
+import { writerIdOf } from "@/lib/script-access";
+import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -15,6 +17,8 @@ export default async function ScriptPage({ params }: { params: Params }) {
   const id = parseInt(projectId, 10);
   if (isNaN(id)) redirect("/dashboard");
 
+  await ensureScriptSchema();
+
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) redirect("/dashboard");
 
@@ -23,14 +27,40 @@ export default async function ScriptPage({ params }: { params: Params }) {
     .from(scripts)
     .where(eq(scripts.projectId, id));
 
+  const suggestions = await db
+    .select()
+    .from(scriptSuggestions)
+    .where(eq(scriptSuggestions.projectId, id))
+    .orderBy(desc(scriptSuggestions.createdAt));
+
+  const members = await db
+    .select()
+    .from(projectMembers)
+    .where(eq(projectMembers.projectId, id));
+
+  const isOwner = project.ownerId === userId;
+  const writerId = writerIdOf(project);
+  const isWriter = writerId === userId;
+
+  // People who could be appointed as writer: members who have actually joined.
+  const eligibleWriters = members
+    .filter((m) => m.clerkUserId)
+    .map((m) => ({ clerkUserId: m.clerkUserId as string, displayName: m.displayName }));
+
   return (
-    <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6">
-      <ScriptEditor
+    <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6">
+      <ScriptWorkspace
         projectId={id}
-        isOwner={project.ownerId === userId}
+        isOwner={isOwner}
+        isWriter={isWriter}
+        ownerId={project.ownerId}
+        writerId={writerId}
+        eligibleWriters={eligibleWriters}
         initialContent={script?.content ?? ""}
+        initialFinalContent={script?.finalContent ?? ""}
         initialFileUrl={script?.fileUrl ?? null}
         initialFileName={script?.fileName ?? null}
+        initialSuggestions={suggestions}
       />
     </main>
   );

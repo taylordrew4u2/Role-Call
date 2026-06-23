@@ -17,6 +17,9 @@ export const projects = pgTable("projects", {
   projectType: text("project_type"), // social | music_video | commercial | short | feature
   shootDate: date("shoot_date"),
   description: text("description"),
+  // Clerk user ID of the appointed script writer who approves/declines suggested
+  // edits. Null means the owner is the writer.
+  scriptWriterId: text("script_writer_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -81,6 +84,8 @@ export const assignments = pgTable("assignments", {
 
 // The screenplay for a project — one per project. Either typed/pasted text,
 // an uploaded file (Vercel Blob URL), or both.
+//   content      — the working/editing draft (what the editing tab shows)
+//   finalContent — the published, approved final script (the "Final Script" tab)
 export const scripts = pgTable("scripts", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id")
@@ -88,9 +93,28 @@ export const scripts = pgTable("scripts", {
     .unique()
     .references(() => projects.id, { onDelete: "cascade" }),
   content: text("content").notNull().default(""),
+  finalContent: text("final_content").notNull().default(""),
   fileUrl: text("file_url"),
   fileName: text("file_name"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Edits suggested against the editing draft. Any collaborator can create one;
+// the appointed writer (or owner) approves or declines it.
+export const scriptSuggestions = pgTable("script_suggestions", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull(), // Clerk user ID of suggester
+  authorName: text("author_name").notNull(),
+  anchorText: text("anchor_text").notNull().default(""), // the text they want changed
+  suggestedText: text("suggested_text").notNull().default(""), // their replacement
+  comment: text("comment"),
+  status: text("status").notNull().default("pending"), // pending | approved | declined
+  resolvedBy: text("resolved_by"), // Clerk user ID of the writer who decided
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
 });
 
 // Scenes broken out of the script (e.g. "1A — INT. KITCHEN — DAY")
@@ -156,6 +180,8 @@ export type Role = typeof roles.$inferSelect;
 export type Assignment = typeof assignments.$inferSelect;
 export type NewAssignment = typeof assignments.$inferInsert;
 export type Script = typeof scripts.$inferSelect;
+export type ScriptSuggestion = typeof scriptSuggestions.$inferSelect;
+export type NewScriptSuggestion = typeof scriptSuggestions.$inferInsert;
 export type Scene = typeof scenes.$inferSelect;
 export type NewScene = typeof scenes.$inferInsert;
 export type ShootDay = typeof shootDays.$inferSelect;
