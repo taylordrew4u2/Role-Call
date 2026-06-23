@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Users, Link as LinkIcon } from "lucide-react";
+import { Users, Link as LinkIcon, Trash2 } from "lucide-react";
 import { toast } from "@/components/Toaster";
 
 interface Member {
@@ -19,6 +20,9 @@ interface TeamSidebarProps {
 }
 
 export function TeamSidebar({ members, projectId, onInvite }: TeamSidebarProps) {
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   async function copyInviteLink(member: Member) {
     const link = `${window.location.origin}/api/invite?projectId=${projectId}&memberId=${member.id}`;
     try {
@@ -26,6 +30,28 @@ export function TeamSidebar({ members, projectId, onInvite }: TeamSidebarProps) 
       toast(`Invite link copied — send it to ${member.displayName}.`);
     } catch {
       prompt("Copy this invite link:", link);
+    }
+  }
+
+  async function removeMember(member: Member) {
+    setDeleting(true);
+    try {
+      const res = await fetch(
+        `/api/projects/${projectId}/members?memberId=${member.id}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        toast(`Failed to remove ${member.displayName}: ${data.error}`);
+      } else {
+        toast(`${member.displayName} removed.`);
+        setConfirmDelete(null);
+        window.location.reload();
+      }
+    } catch {
+      toast("Network error. Please try again.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -89,12 +115,52 @@ export function TeamSidebar({ members, projectId, onInvite }: TeamSidebarProps) 
                   >
                     <LinkIcon className="h-3.5 w-3.5" />
                   </button>
+                  <button
+                    onClick={() => setConfirmDelete(m.id)}
+                    title="Remove member"
+                    className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {confirmDelete !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">
+              Remove member?
+            </h2>
+            <p className="text-sm text-slate-600 mb-6">
+              {members.find((m) => m.id === confirmDelete)?.displayName} will be
+              removed from this project. They can be re-invited later.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const member = members.find((m) => m.id === confirmDelete);
+                  if (member) removeMember(member);
+                }}
+                disabled={deleting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Removing..." : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
