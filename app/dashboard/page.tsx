@@ -12,12 +12,13 @@ import { formatDate } from "@/lib/utils";
 import { getProductionType } from "@/lib/production-types";
 import { CreateSeriesButton } from "@/components/CreateSeriesButton";
 import { ensureSeriesSchema } from "@/lib/db/ensure-series-schema";
+import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  await ensureSeriesSchema();
+  await Promise.all([ensureSeriesSchema(), ensureScriptSchema()]);
   const user = await currentUser();
 
   // Projects the user owns or has joined as a member.

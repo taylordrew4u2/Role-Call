@@ -11,6 +11,7 @@ import { ProjectTabs } from "@/components/ProjectTabs";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { EditProjectButton } from "@/components/EditProjectButton";
 import { getProductionType } from "@/lib/production-types";
+import { ensureAllSchema } from "@/lib/db/ensure-all-schema";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -27,6 +28,8 @@ export default async function ProjectLayout({
   const { projectId } = await params;
   const id = parseInt(projectId, 10);
   if (isNaN(id)) redirect("/dashboard");
+
+  await ensureAllSchema();
 
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) redirect("/dashboard");

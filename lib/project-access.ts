@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import type { Project } from "@/lib/db/schema";
+import { ensureAllSchema } from "@/lib/db/ensure-all-schema";
 
 type Ok = { ok: true; userId: string; id: number; project: Project };
 type Err = { ok: false; response: Response };
@@ -20,6 +21,7 @@ export async function getProjectAccess(projectIdStr: string): Promise<Ok | Err> 
   if (isNaN(id)) {
     return { ok: false, response: Response.json({ error: "Invalid project ID" }, { status: 400 }) };
   }
+  await ensureAllSchema();
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) {
     return { ok: false, response: Response.json({ error: "Project not found" }, { status: 404 }) };
