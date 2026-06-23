@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, UserPlus, Copy, Check } from "lucide-react";
+import { UserPlus, Copy, Check, Link as LinkIcon } from "lucide-react";
 
 interface InviteModalProps {
   open: boolean;
@@ -49,8 +49,8 @@ export function InviteModal({
     setError("");
     setSuccess("");
     setInviteUrl("");
-    if (!email || !name) {
-      setError("Name and email are required.");
+    if (!name.trim()) {
+      setError("A name is required.");
       return;
     }
     setSending(true);
@@ -58,18 +58,18 @@ export function InviteModal({
       const res = await fetch(`/api/projects/${projectId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, displayName: name }),
+        body: JSON.stringify({ displayName: name, email: email || undefined }),
       });
       const d = await res.json();
       if (!res.ok) {
-        setError(d.error || "Failed to add member.");
+        setError(d.error || "Failed to create invite.");
       } else {
-        const sent = d.emailStatus === "sent";
         setInviteUrl(d.inviteUrl || "");
+        const emailed = email && d.emailStatus === "sent";
         setSuccess(
-          sent
-            ? `Invite emailed to ${email}.`
-            : `${name} was added, but the email couldn't be sent. Share the invite link below directly.`
+          emailed
+            ? `Invite link created and emailed to ${email}. You can also copy it below.`
+            : `Invite link created for ${name}. Copy it below and send it to them.`
         );
         setEmail("");
         setName("");
@@ -91,8 +91,8 @@ export function InviteModal({
             Invite Team Member
           </DialogTitle>
           <DialogDescription>
-            They&apos;ll get an email invite — or you can copy the link and send
-            it to them directly.
+            Enter a name to generate an invite link you can copy and send. Email
+            is optional — add it to also email them (when email is configured).
           </DialogDescription>
         </DialogHeader>
 
@@ -107,7 +107,9 @@ export function InviteModal({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="inv-email">Email Address</Label>
+            <Label htmlFor="inv-email">
+              Email Address <span className="text-slate-400">(optional)</span>
+            </Label>
             <Input
               id="inv-email"
               type="email"
@@ -163,8 +165,8 @@ export function InviteModal({
             disabled={sending}
             className="w-full gap-2"
           >
-            <Mail className="h-4 w-4" />
-            {sending ? "Sending…" : "Send Invite"}
+            <LinkIcon className="h-4 w-4" />
+            {sending ? "Creating…" : "Create invite link"}
           </Button>
         </DialogFooter>
       </DialogContent>
