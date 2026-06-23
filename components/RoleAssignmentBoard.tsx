@@ -561,6 +561,7 @@ export function RoleAssignmentBoard({
         {/* Sidebar */}
         <TeamSidebar
           members={membersWithCounts}
+          projectId={projectId}
           onInvite={() => setInviteOpen(true)}
         />
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Users } from "lucide-react";
+import { Users, Link as LinkIcon } from "lucide-react";
+import { toast } from "@/components/Toaster";
 
 interface Member {
   id: number;
@@ -13,10 +14,21 @@ interface Member {
 
 interface TeamSidebarProps {
   members: Member[];
+  projectId: number;
   onInvite: () => void;
 }
 
-export function TeamSidebar({ members, onInvite }: TeamSidebarProps) {
+export function TeamSidebar({ members, projectId, onInvite }: TeamSidebarProps) {
+  async function copyInviteLink(member: Member) {
+    const link = `${window.location.origin}/api/invite?projectId=${projectId}&memberId=${member.id}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast(`Invite link copied — send it to ${member.displayName}.`);
+    } catch {
+      prompt("Copy this invite link:", link);
+    }
+  }
+
   return (
     <aside className="w-full lg:w-64 shrink-0">
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -56,18 +68,27 @@ export function TeamSidebar({ members, onInvite }: TeamSidebarProps) {
                   </p>
                   <p className="text-xs text-slate-500 truncate">{m.email ?? "No email"}</p>
                 </div>
-                <div className="ml-2 flex flex-col items-end gap-1 shrink-0">
-                  <Badge
-                    variant={m.roleCount > 0 ? "default" : "secondary"}
-                    className="text-xs"
+                <div className="ml-2 flex items-center gap-1.5 shrink-0">
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge
+                      variant={m.roleCount > 0 ? "default" : "secondary"}
+                      className="text-xs"
+                    >
+                      {m.roleCount} role{m.roleCount !== 1 ? "s" : ""}
+                    </Badge>
+                    {m.status === "invited" && (
+                      <span className="text-[10px] text-amber-600 font-medium">
+                        invited
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => copyInviteLink(m)}
+                    title="Copy invite link"
+                    className="text-slate-400 hover:text-slate-900 p-1 rounded hover:bg-slate-100 transition-colors"
                   >
-                    {m.roleCount} role{m.roleCount !== 1 ? "s" : ""}
-                  </Badge>
-                  {m.status === "invited" && (
-                    <span className="text-[10px] text-amber-600 font-medium">
-                      invited
-                    </span>
-                  )}
+                    <LinkIcon className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </li>
             ))}

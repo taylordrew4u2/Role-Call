@@ -52,7 +52,8 @@ export async function POST(
   }
 
   // Create member record. Email is optional (e.g. cast added without one);
-  // members with no email are recorded as active rather than "invited".
+  // Every member is created with an invite link and starts as "invited";
+  // they become "active" when they open that link.
   const [member] = await db
     .insert(projectMembers)
     .values({
@@ -61,7 +62,7 @@ export async function POST(
       displayName: displayName.trim(),
       kind: kind === "cast" ? "cast" : "crew",
       character: character?.trim() || null,
-      status: email?.trim() ? "invited" : "active",
+      status: "invited",
     })
     .returning();
 
