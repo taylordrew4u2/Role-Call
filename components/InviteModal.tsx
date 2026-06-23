@@ -12,7 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Copy, Check, Link as LinkIcon } from "lucide-react";
+import { UserPlus, Copy, Check, Link as LinkIcon, PenLine, Megaphone } from "lucide-react";
+
+type Position = "writer" | "director";
 
 interface InviteModalProps {
   open: boolean;
@@ -29,6 +31,7 @@ export function InviteModal({
 }: InviteModalProps) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [position, setPosition] = useState<Position>("director");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -58,7 +61,11 @@ export function InviteModal({
       const res = await fetch(`/api/projects/${projectId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: name, email: email || undefined }),
+        body: JSON.stringify({
+          displayName: name,
+          email: email || undefined,
+          position,
+        }),
       });
       const d = await res.json();
       if (!res.ok) {
@@ -66,10 +73,11 @@ export function InviteModal({
       } else {
         setInviteUrl(d.inviteUrl || "");
         const emailed = email && d.emailStatus === "sent";
+        const role = position === "writer" ? "writer" : "director";
         setSuccess(
           emailed
-            ? `Invite link created and emailed to ${email}. You can also copy it below.`
-            : `Invite link created for ${name}. Copy it below and send it to them.`
+            ? `Invite link created and emailed to ${email} as ${role}. You can also copy it below.`
+            : `Invite link created for ${name} as ${role}. Copy it below and send it to them.`
         );
         setEmail("");
         setName("");
@@ -105,6 +113,42 @@ export function InviteModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Invite as</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPosition("director")}
+                className={`flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  position === "director"
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <Megaphone className="h-4 w-4" />
+                Director
+              </button>
+              <button
+                type="button"
+                onClick={() => setPosition("writer")}
+                className={`flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  position === "writer"
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <PenLine className="h-4 w-4" />
+                Writer
+              </button>
+            </div>
+            {position === "writer" && (
+              <p className="text-xs text-slate-500">
+                The writer can approve or decline suggested script edits once they
+                join.
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <Label htmlFor="inv-email">

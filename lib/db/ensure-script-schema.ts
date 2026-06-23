@@ -20,6 +20,10 @@ export function ensureScriptSchema(): Promise<void> {
           ADD COLUMN IF NOT EXISTS final_content text NOT NULL DEFAULT ''
       `);
       await db.execute(sql`
+        ALTER TABLE project_members
+          ADD COLUMN IF NOT EXISTS position text
+      `);
+      await db.execute(sql`
         CREATE TABLE IF NOT EXISTS script_suggestions (
           id serial PRIMARY KEY,
           project_id integer NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

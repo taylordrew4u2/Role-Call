@@ -64,6 +64,10 @@ export const projectMembers = pgTable("project_members", {
   email: text("email"), // optional — actors may be added without an email
   displayName: text("display_name").notNull(),
   kind: text("kind").notNull().default("crew"), // crew | cast
+  // The position this member was invited as. Currently writer | director;
+  // a member invited as "writer" becomes the project's appointed script writer
+  // when they accept.
+  position: text("position"), // writer | director | null
   character: text("character"), // character played, for cast
   status: text("status").notNull().default("invited"), // invited | active
 });
