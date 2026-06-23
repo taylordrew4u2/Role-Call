@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { projects, projectMembers } from "@/lib/db/schema";
 import { getAppUrl } from "@/lib/get-app-url";
 import { eq, and } from "drizzle-orm";
+import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -46,10 +47,16 @@ export async function POST(
   if (project.ownerId !== userId)
     return Response.json({ error: "Forbidden" }, { status: 403 });
 
-  const { email, displayName, kind, character } = await request.json();
+  const { email, displayName, kind, character, position } = await request.json();
   if (!displayName?.trim()) {
     return Response.json({ error: "A name is required" }, { status: 400 });
   }
+
+  await ensureScriptSchema();
+
+  // A member is invited as a writer or a director (or neither for plain cast/crew).
+  const normalizedPosition =
+    position === "writer" ? "writer" : position === "director" ? "director" : null;
 
   // Create member record. Email is optional (e.g. cast added without one);
   // Every member is created with an invite link and starts as "invited";
@@ -61,6 +68,7 @@ export async function POST(
       email: email?.trim() || null,
       displayName: displayName.trim(),
       kind: kind === "cast" ? "cast" : "crew",
+      position: normalizedPosition,
       character: character?.trim() || null,
       status: "invited",
     })

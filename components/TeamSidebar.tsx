@@ -11,6 +11,7 @@ interface Member {
   email: string | null;
   status: string;
   roleCount: number;
+  position?: string | null;
 }
 
 interface TeamSidebarProps {
@@ -89,8 +90,19 @@ export function TeamSidebar({ members, projectId, onInvite }: TeamSidebarProps) 
                 className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">
+                  <p className="text-sm font-medium text-slate-900 truncate flex items-center gap-1.5">
                     {m.displayName}
+                    {m.position && (
+                      <span
+                        className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize ${
+                          m.position === "writer"
+                            ? "bg-violet-50 text-violet-700"
+                            : "bg-sky-50 text-sky-700"
+                        }`}
+                      >
+                        {m.position}
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-slate-500 truncate">{m.email ?? "No email"}</p>
                 </div>

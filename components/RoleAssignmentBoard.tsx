@@ -52,6 +52,7 @@ interface Member {
   displayName: string;
   email: string | null;
   status: string;
+  position?: string | null;
 }
 
 interface Assignment {

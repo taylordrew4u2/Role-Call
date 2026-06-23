@@ -1,8 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { getAppUrl } from "@/lib/get-app-url";
-import { projectMembers } from "@/lib/db/schema";
+import { projects, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 
 // GET /api/invite?projectId=X&memberId=Y — accept invite landing
 export async function GET(request: Request) {
@@ -13,6 +14,8 @@ export async function GET(request: Request) {
   if (isNaN(projectId) || isNaN(memberId)) {
     return Response.json({ error: "Invalid invite link" }, { status: 400 });
   }
+
+  await ensureScriptSchema();
 
   const [member] = await db
     .select()
@@ -35,6 +38,15 @@ export async function GET(request: Request) {
     .update(projectMembers)
     .set({ status: "active", clerkUserId: userId ?? member.clerkUserId })
     .where(eq(projectMembers.id, memberId));
+
+  // A member invited as the writer becomes the project's appointed script
+  // writer once they join and link their account.
+  if (member.position === "writer" && userId) {
+    await db
+      .update(projects)
+      .set({ scriptWriterId: userId })
+      .where(eq(projects.id, projectId));
+  }
 
   // Redirect to the project page (user must sign in to view)
   return Response.redirect(new URL(`/dashboard/${projectId}`, getAppUrl(request)));
