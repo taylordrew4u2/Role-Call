@@ -2,14 +2,14 @@ import { put } from "@vercel/blob";
 import { db } from "@/lib/db";
 import { scripts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { requireProjectOwner } from "@/lib/project-access";
+import { requireScriptWriter } from "@/lib/script-access";
 
 type Params = Promise<{ projectId: string }>;
 
 // POST /api/projects/[projectId]/script/upload — upload a script file to Vercel Blob
 export async function POST(request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireScriptWriter(projectId);
   if (!access.ok) return access.response;
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
