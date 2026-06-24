@@ -216,6 +216,7 @@ export function ShotListBoard({
   const [bulkOpen, setBulkOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
 
   // ---- Mass selection ----
   const [selectMode, setSelectMode] = useState(false);
@@ -392,6 +393,29 @@ export function ShotListBoard({
     setShotDialog({ open: false, shot: null, sceneId: null });
   }
 
+  // ---- Backfill the Character field on existing shots from the script/cast ----
+  async function backfillCharacters() {
+    setBackfilling(true);
+    try {
+      const res = await fetch(`${api}/shots/backfill-characters`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error ?? "Couldn't fill characters.", "error");
+        return;
+      }
+      if (Array.isArray(data.shots)) setShots(data.shots);
+      toast(
+        data.updated > 0
+          ? `Filled the character on ${data.updated} shot${data.updated === 1 ? "" : "s"}.`
+          : "No blank shots could be matched — add characters by editing a shot."
+      );
+    } catch {
+      toast("Network error. Please try again.", "error");
+    } finally {
+      setBackfilling(false);
+    }
+  }
+
   async function deleteShot(shot: Shot) {
     if (!confirm("Delete this shot?")) return;
     const res = await fetch(`${api}/shots/${shot.id}`, { method: "DELETE" });
@@ -462,6 +486,19 @@ export function ShotListBoard({
               <Wand2 className="h-4 w-4" />
               {generating ? "Reading script…" : "Scenes & shots from script"}
             </Button>
+            {shots.some((s) => !s.castNotes?.trim()) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={backfillCharacters}
+                disabled={backfilling}
+                className="gap-1.5"
+                title="Fill the Character field on existing shots from the script and cast"
+              >
+                <Users className="h-4 w-4" />
+                {backfilling ? "Matching…" : "Fill characters"}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
