@@ -207,6 +207,96 @@ function stripWrylies(line: string): string {
     .trim();
 }
 
+// Transitions in a slug-less script — ignored rather than turned into scenes.
+const FALLBACK_TRANSITION =
+  /^(?:CUT|SMASH CUT|MATCH CUT|HARD CUT|QUICK CUT|JUMP CUT|TIME CUT|DISSOLVE|FADE (?:IN|OUT|TO)|WIPE|BACK TO)\b.*:?$/i;
+
+// A section header in a slug-less script: a non-cue line ending with ":" that
+// introduces a block, e.g. "GREGGO GETS ON ZOOM:".
+function isSectionHeader(line: string): boolean {
+  if (!line.endsWith(":")) return false;
+  if (isCharacterCue(line)) return false;
+  if (FALLBACK_TRANSITION.test(line)) return false;
+  return line.length <= 80;
+}
+
+/**
+ * Fallback for scripts with no INT/EXT slug lines (e.g. Zoom-call or
+ * stage-style scripts). Unlike plain paragraph chunking, this recognises
+ * character cues and captures their dialogue, and treats "LABEL:" lines as
+ * section headers — so a dialogue-only script still yields cast-tagged coverage
+ * instead of a pile of empty establishing shots.
+ *
+ * Returns null when there's nothing dialogue-like to find, so the caller can
+ * fall back to paragraph chunking for pure prose.
+ */
+function dialogueAwareFallback(lines: string[]): ParsedScene[] | null {
+  const scenes: ParsedScene[] = [];
+  let current: ParsedScene | null = null;
+  let speaker: string | null = null;
+  let auto = 0;
+  let sawDialogue = false;
+  let sawSection = false;
+
+  const startScene = (heading: string) => {
+    auto += 1;
+    const { location, timeOfDay } = splitLocationTime(heading);
+    current = {
+      sceneNumber: String(auto),
+      heading: heading.slice(0, 80),
+      intExt: inferIntExt(heading),
+      location: (location || heading).slice(0, 80),
+      timeOfDay,
+      synopsis: "",
+      action: [],
+      dialogue: [],
+    };
+    scenes.push(current);
+    speaker = null;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      speaker = null;
+      continue;
+    }
+
+    if (FALLBACK_TRANSITION.test(line)) {
+      speaker = null;
+      continue;
+    }
+
+    if (isSectionHeader(line)) {
+      sawSection = true;
+      startScene(line);
+      continue;
+    }
+
+    if (!current) startScene("Scene 1");
+
+    if (isCharacterCue(line)) {
+      speaker = cueName(line);
+      continue;
+    }
+
+    if (speaker) {
+      const spoken = stripWrylies(line);
+      if (spoken) {
+        current!.dialogue.push({ character: speaker, text: spoken });
+        sawDialogue = true;
+      }
+      continue;
+    }
+
+    if (!current!.synopsis) current!.synopsis = line.slice(0, 200);
+    current!.action.push(line);
+  }
+
+  if (!sawDialogue && !sawSection) return null;
+  return scenes;
+}
+
 /**
  * Parse screenplay text into scenes. Designed to always return at least one
  * scene whenever the input contains any text — it falls back from strict
@@ -269,6 +359,8 @@ export function parseScenesFromScript(text: string): ParsedScene[] {
 
   if (scenes.length > 0) return scenes;
 
-  // No headings at all — infer scenes from paragraphs so we never give up.
-  return chunkFallback(lines);
+  // No slug headings. Try a dialogue-aware pass first (captures speakers and
+  // dialogue from Zoom/stage-style scripts), then fall back to paragraph
+  // chunking for pure prose.
+  return dialogueAwareFallback(lines) ?? chunkFallback(lines);
 }
