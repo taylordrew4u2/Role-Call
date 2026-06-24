@@ -43,10 +43,17 @@ export async function POST(request: Request, { params }: { params: Params }) {
   // text, so there's no "couldn't read it" path here.
   const parsed = parseScenesFromScript(content);
 
-  const existingScenes = await db
-    .select()
-    .from(scenes)
-    .where(eq(scenes.projectId, access.id));
+  // Regenerating replaces the previous auto-generated scenes/shots so running
+  // it again doesn't pile up duplicates. Default true.
+  const replace = body?.replace !== false;
+  if (replace) {
+    await db.delete(shots).where(eq(shots.projectId, access.id));
+    await db.delete(scenes).where(eq(scenes.projectId, access.id));
+  }
+
+  const existingScenes = replace
+    ? []
+    : await db.select().from(scenes).where(eq(scenes.projectId, access.id));
   let sceneOrder = existingScenes.length;
 
   const sceneRows = parsed.map((s) => ({
@@ -63,10 +70,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const createdScenes = await db.insert(scenes).values(sceneRows).returning();
 
   // Generate an inferred shot list per scene and link it to the new scenes.
-  const existingShots = await db
-    .select()
-    .from(shots)
-    .where(eq(shots.projectId, access.id));
+  const existingShots = replace
+    ? []
+    : await db.select().from(shots).where(eq(shots.projectId, access.id));
   let shotOrder = existingShots.length;
 
   const shotRows = createdScenes.flatMap((scene, i) =>
