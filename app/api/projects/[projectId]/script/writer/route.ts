@@ -1,22 +1,19 @@
 import { db } from "@/lib/db";
 import { projects, projectMembers } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import { getProjectAccess } from "@/lib/project-access";
+import { requireProjectManager } from "@/lib/project-access";
 import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 
 type Params = Promise<{ projectId: string }>;
 
 // PUT /api/projects/[projectId]/script/writer — appoint the script writer.
-// Owner-only. Body: { writerId: string | null }. A null/empty value resets the
-// writer back to the owner.
+// Owner or director only. Body: { writerId: string | null }. A null/empty value
+// resets the writer back to the owner.
 export async function PUT(request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
   await ensureScriptSchema();
-  const access = await getProjectAccess(projectId);
+  const access = await requireProjectManager(projectId);
   if (!access.ok) return access.response;
-  if (access.project.ownerId !== access.userId) {
-    return Response.json({ error: "Only the owner can appoint a writer." }, { status: 403 });
-  }
 
   const { writerId } = await request.json();
   const next: string | null =

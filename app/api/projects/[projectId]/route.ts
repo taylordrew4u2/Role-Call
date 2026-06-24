@@ -2,18 +2,9 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { projects, projectMembers, assignments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { requireProjectManager } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
-
-async function getProjectAndVerifyOwner(projectId: number, userId: string) {
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, projectId));
-  if (!project) return null;
-  if (project.ownerId !== userId) return null;
-  return project;
-}
 
 // GET /api/projects/[projectId] — project detail with members + assignments
 export async function GET(
@@ -52,13 +43,10 @@ export async function PATCH(
   request: Request,
   { params }: { params: Params }
 ) {
-  const { userId } = await auth();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
   const { projectId } = await params;
-  const id = parseInt(projectId, 10);
-  const project = await getProjectAndVerifyOwner(id, userId);
-  if (!project) return Response.json({ error: "Not found" }, { status: 404 });
+  const access = await requireProjectManager(projectId);
+  if (!access.ok) return access.response;
+  const { id, project } = access;
 
   const body = await request.json();
   const [updated] = await db
@@ -82,14 +70,10 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Params }
 ) {
-  const { userId } = await auth();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
   const { projectId } = await params;
-  const id = parseInt(projectId, 10);
-  const project = await getProjectAndVerifyOwner(id, userId);
-  if (!project) return Response.json({ error: "Not found" }, { status: 404 });
+  const access = await requireProjectManager(projectId);
+  if (!access.ok) return access.response;
 
-  await db.delete(projects).where(eq(projects.id, id));
+  await db.delete(projects).where(eq(projects.id, access.id));
   return new Response(null, { status: 204 });
 }

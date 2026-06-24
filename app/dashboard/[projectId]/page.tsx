@@ -7,6 +7,7 @@ import { getProjectRoles } from "@/lib/db/project-roles";
 import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
 import { CheckCircle2 } from "lucide-react";
 import { getProductionType } from "@/lib/production-types";
+import { isProjectManager } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -20,6 +21,9 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) redirect("/dashboard");
+
+  // Directors manage the project alongside the owner.
+  const canManage = await isProjectManager(project, userId);
 
   // Load all data in parallel
   const [members, projectAssignments, allRoles] = await Promise.all([
@@ -64,6 +68,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
         projectId={id}
         ownerId={project.ownerId}
         currentUserId={userId}
+        canManage={canManage}
         roles={allRoles.map((r) => ({
           ...r,
           duties: (r.duties as string[]) ?? [],

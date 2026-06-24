@@ -29,37 +29,36 @@ export async function getProjectAccess(projectIdStr: string): Promise<Ok | Err> 
   return { ok: true, userId, id, project };
 }
 
-/** Like getProjectAccess but also requires the caller to be the project owner. */
-export async function requireProjectOwner(projectIdStr: string): Promise<Ok | Err> {
-  const access = await getProjectAccess(projectIdStr);
-  if (!access.ok) return access;
-  if (access.project.ownerId !== access.userId) {
-    return { ok: false, response: Response.json({ error: "Forbidden" }, { status: 403 }) };
-  }
-  return access;
-}
-
 /**
- * Like getProjectAccess but requires the caller to be the owner OR a joined
- * member invited as a director. Used for the shot list (shots, scenes, shoot
- * days), which directors are allowed to build and edit.
+ * A "manager" is the project owner OR a joined member invited as a director.
+ * Directors have the same permissions as the owner, so this is the check that
+ * gates every management action. Safe to call from server components too.
  */
-export async function requireProjectDirector(projectIdStr: string): Promise<Ok | Err> {
-  const access = await getProjectAccess(projectIdStr);
-  if (!access.ok) return access;
-  if (access.project.ownerId === access.userId) return access;
-
+export async function isProjectManager(
+  project: Project,
+  userId: string
+): Promise<boolean> {
+  if (project.ownerId === userId) return true;
   const [member] = await db
     .select()
     .from(projectMembers)
     .where(
       and(
-        eq(projectMembers.projectId, access.id),
-        eq(projectMembers.clerkUserId, access.userId)
+        eq(projectMembers.projectId, project.id),
+        eq(projectMembers.clerkUserId, userId)
       )
     );
-  if (member?.position === "director") return access;
+  return member?.position === "director";
+}
 
+/**
+ * Like getProjectAccess but requires the caller to be a manager (owner or a
+ * joined director). This is the gate for all management endpoints.
+ */
+export async function requireProjectManager(projectIdStr: string): Promise<Ok | Err> {
+  const access = await getProjectAccess(projectIdStr);
+  if (!access.ok) return access;
+  if (await isProjectManager(access.project, access.userId)) return access;
   return {
     ok: false,
     response: Response.json(
@@ -68,3 +67,8 @@ export async function requireProjectDirector(projectIdStr: string): Promise<Ok |
     ),
   };
 }
+
+// Back-compat aliases. Directors have full owner parity, so the historical
+// "owner" and "director" gates both resolve to the manager check.
+export const requireProjectOwner = requireProjectManager;
+export const requireProjectDirector = requireProjectManager;
