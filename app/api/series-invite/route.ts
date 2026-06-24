@@ -1,9 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { getAppUrl } from "@/lib/get-app-url";
-import { seriesMembers, projectMembers } from "@/lib/db/schema";
+import { seriesMembers, projectMembers, projects } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ensureSeriesSchema } from "@/lib/db/ensure-series-schema";
+import { projectIdsInSeries } from "@/lib/series-access";
 
 // GET /api/series-invite?seriesId=X&memberId=Y — accept a series invite.
 // Marks the member active and, if the visitor is signed in, links their Clerk
@@ -38,6 +39,18 @@ export async function GET(request: Request) {
     .update(projectMembers)
     .set({ status: "active", clerkUserId: userId ?? member.clerkUserId })
     .where(eq(projectMembers.seriesMemberId, memberId));
+
+  // A member invited as the writer becomes the appointed script writer on every
+  // project in the series once they join and link their account.
+  if (member.position === "writer" && userId) {
+    const projectIds = await projectIdsInSeries(seriesId);
+    for (const projectId of projectIds) {
+      await db
+        .update(projects)
+        .set({ scriptWriterId: userId })
+        .where(eq(projects.id, projectId));
+    }
+  }
 
   return Response.redirect(new URL(`/dashboard/series/${seriesId}`, getAppUrl(request)));
 }

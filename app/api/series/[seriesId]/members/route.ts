@@ -34,10 +34,14 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const access = await requireSeriesOwner(seriesId);
   if (!access.ok) return access.response;
 
-  const { displayName, email, kind } = await request.json();
+  const { displayName, email, kind, position } = await request.json();
   if (!displayName?.trim()) {
     return Response.json({ error: "A name is required" }, { status: 400 });
   }
+
+  // A member is invited as a writer or a director (or neither for plain cast/crew).
+  const normalizedPosition =
+    position === "writer" ? "writer" : position === "director" ? "director" : null;
 
   const [member] = await db
     .insert(seriesMembers)
@@ -46,6 +50,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
       email: email?.trim() || null,
       displayName: displayName.trim(),
       kind: kind === "cast" ? "cast" : "crew",
+      position: normalizedPosition,
       status: "invited",
     })
     .returning();

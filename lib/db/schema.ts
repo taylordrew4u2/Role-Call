@@ -48,6 +48,7 @@ export const seriesMembers = pgTable("series_members", {
   email: text("email"),
   displayName: text("display_name").notNull(),
   kind: text("kind").notNull().default("crew"), // crew | cast
+  position: text("position"), // writer | director | null
   status: text("status").notNull().default("invited"), // invited | active
 });
 
