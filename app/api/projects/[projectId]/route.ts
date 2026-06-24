@@ -58,6 +58,10 @@ export async function PATCH(
       shootDate: body.shootDate !== undefined ? body.shootDate : project.shootDate,
       description:
         body.description !== undefined ? body.description : project.description,
+      cameraSetup:
+        body.cameraSetup === "single" || body.cameraSetup === "dual"
+          ? body.cameraSetup
+          : project.cameraSetup,
     })
     .where(eq(projects.id, id))
     .returning();

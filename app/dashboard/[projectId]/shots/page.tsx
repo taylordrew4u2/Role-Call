@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { projects, scenes, shots, projectMembers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { ShotListBoard } from "@/components/ShotListBoard";
+import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -15,6 +16,7 @@ export default async function ShotsPage({ params }: { params: Params }) {
   const id = parseInt(projectId, 10);
   if (isNaN(id)) redirect("/dashboard");
 
+  await ensureScriptSchema();
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) redirect("/dashboard");
 
@@ -41,6 +43,7 @@ export default async function ShotsPage({ params }: { params: Params }) {
         initialScenes={sceneRows}
         initialShots={shotRows}
         cast={cast}
+        initialCameraSetup={project.cameraSetup ?? "single"}
       />
     </main>
   );

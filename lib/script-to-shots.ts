@@ -82,7 +82,10 @@ function snippet(text: string, n = 60): string {
  * Consecutive lines by the same person collapse into that person's coverage, so
  * a 20-line two-hander yields ~5 purposeful shots rather than 20 near-duplicates.
  */
-function dialogueCoverage(scene: ParsedScene): Omit<GeneratedShot, "shotNumber">[] {
+function dialogueCoverage(
+  scene: ParsedScene,
+  opts: { singleCamera?: boolean } = {}
+): Omit<GeneratedShot, "shotNumber">[] {
   const beats = scene.dialogue;
   if (!beats.length) return [];
 
@@ -126,14 +129,18 @@ function dialogueCoverage(scene: ParsedScene): Omit<GeneratedShot, "shotNumber">
     return out;
   }
 
-  // Master establishing the exchange (two-shot for a pair, wider for a group).
-  out.push({
-    description: `Dialogue master — ${order.join(" / ")}`,
-    shotSize: order.length === 2 ? "MWS" : "WS",
-    angle: "Eye-level",
-    movement: "Static",
-    castNotes: order.join(", "),
-  });
+  // With two cameras you can hold the players together, so lead with a
+  // master/two-shot. On a single camera (iPhone) every shot is one person, so
+  // skip the group shot entirely.
+  if (!opts.singleCamera) {
+    out.push({
+      description: `Dialogue master — ${order.join(" / ")}`,
+      shotSize: order.length === 2 ? "MWS" : "WS",
+      angle: "Eye-level",
+      movement: "Static",
+      castNotes: order.join(", "),
+    });
+  }
 
   // Per speaker: an OTS single, plus a CU for principals (more than one line).
   for (const c of order) {
@@ -198,18 +205,22 @@ function castFor(text: string, chars: string[]): string {
  */
 export function buildShotsForScene(
   scene: ParsedScene,
-  opts: { maxShots?: number; mode?: ShotMode } = {}
+  opts: { maxShots?: number; mode?: ShotMode; singleCamera?: boolean } = {}
 ): GeneratedShot[] {
   const max = opts.maxShots ?? 40;
   const mode = opts.mode ?? "action";
+  const single = opts.singleCamera ?? false;
   const shots: GeneratedShot[] = [];
   const numFor = () => `${scene.sceneNumber || ""}${shotLetter(shots.length)}`;
 
   // Everyone who appears in this scene — used to tag every shot with its cast.
   const chars = sceneCharacters(scene);
-  const allCast = chars.join(", ");
+  // On a single camera every shot frames one person, so cast tags are limited
+  // to a single name; two cameras can hold characters together.
+  const firstOf = (s: string) => s.split(",")[0]?.trim() ?? "";
+  const allCast = single ? chars[0] ?? "" : chars.join(", ");
 
-  // 1) Establishing shot of the location (tagged with everyone in the scene).
+  // 1) Establishing shot of the location.
   const place = scene.location || scene.heading;
   shots.push({
     shotNumber: numFor(),
@@ -226,6 +237,7 @@ export function buildShotsForScene(
     for (let i = 0; i < list.length && shots.length < max; i++) {
       const description = list[i];
       const guess = suggestShotFields(description);
+      const cast = castFor(description, chars);
       shots.push({
         shotNumber: numFor(),
         description: description.slice(0, 200),
@@ -233,14 +245,14 @@ export function buildShotsForScene(
         shotSize: guess.shotSize ?? "MS",
         angle: guess.angle ?? "Eye-level",
         movement: guess.movement ?? "Static",
-        castNotes: castFor(description, chars) || undefined,
+        castNotes: (single ? firstOf(cast) : cast) || undefined,
       });
     }
   }
 
   // 3) Proper dialogue coverage: master + OTS singles + CUs on principals.
   if (mode === "dialogue" || mode === "both") {
-    for (const cov of dialogueCoverage(scene)) {
+    for (const cov of dialogueCoverage(scene, { singleCamera: single })) {
       if (shots.length >= max) break;
       shots.push({ shotNumber: numFor(), ...cov, description: cov.description.slice(0, 200) });
     }
@@ -252,9 +264,13 @@ export function buildShotsForScene(
 /** Infer a full shot list across every parsed scene, grouped by scene index. */
 export function buildShotsForScenes(
   scenes: ParsedScene[],
-  opts: { maxShotsPerScene?: number; mode?: ShotMode } = {}
+  opts: { maxShotsPerScene?: number; mode?: ShotMode; singleCamera?: boolean } = {}
 ): GeneratedShot[][] {
   return scenes.map((s) =>
-    buildShotsForScene(s, { maxShots: opts.maxShotsPerScene, mode: opts.mode })
+    buildShotsForScene(s, {
+      maxShots: opts.maxShotsPerScene,
+      mode: opts.mode,
+      singleCamera: opts.singleCamera,
+    })
   );
 }
