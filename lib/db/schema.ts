@@ -28,6 +28,10 @@ export const projects = pgTable("projects", {
   shootDate: date("shoot_date"),
   description: text("description"),
   scriptWriterId: text("script_writer_id"),
+  // What the project is shot on, which drives shot-list coverage:
+  //   "single" — one camera (e.g. iPhone): one character per shot
+  //   "dual"   — two cameras: also covers characters together (two-shots)
+  cameraSetup: text("camera_setup"),
   // Optional parent series; null for standalone projects.
   seriesId: integer("series_id").references(() => series.id, {
     onDelete: "set null",

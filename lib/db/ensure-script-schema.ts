@@ -16,6 +16,10 @@ export function ensureScriptSchema(): Promise<void> {
           ADD COLUMN IF NOT EXISTS script_writer_id text
       `);
       await db.execute(sql`
+        ALTER TABLE projects
+          ADD COLUMN IF NOT EXISTS camera_setup text
+      `);
+      await db.execute(sql`
         ALTER TABLE scripts
           ADD COLUMN IF NOT EXISTS final_content text NOT NULL DEFAULT ''
       `);

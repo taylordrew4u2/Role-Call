@@ -37,6 +37,7 @@ import {
   CheckSquare,
   Square,
   Users,
+  Video,
 } from "lucide-react";
 import type { Scene, Shot } from "@/lib/db/schema";
 import { parseShotLines } from "@/lib/parse-shots";
@@ -142,9 +143,13 @@ function resolveCast(
   return { key: "name:" + norm, label: raw.trim(), sub: null };
 }
 
-// Group shots by cast member. A shot with multiple names appears under each;
-// shots with no cast fall under "Unassigned". Groups are ordered by how many
-// shots feature them (the busiest cast first) so it reads like a day's workload.
+const TOGETHER = "Characters together";
+
+// Group shots by cast. A shot featuring a single character goes under that
+// character; a shot with two or more goes into one "Characters together"
+// section (instead of being duplicated under each). No-cast shots fall under
+// "Unassigned". Individual characters are ordered by workload (busiest first),
+// with "Characters together" then "Unassigned" last.
 function groupShotsByCast(shots: Shot[], cast: CastRef[]): CastGroup[] {
   const byChar = new Map<string, CastRef>();
   const byName = new Map<string, CastRef>();
@@ -157,18 +162,33 @@ function groupShotsByCast(shots: Shot[], cast: CastRef[]): CastGroup[] {
     string,
     { label: string; sub: string | null; shots: Shot[]; scenes: Set<number | null> }
   >();
+  const add = (key: string, label: string, sub: string | null, shot: Shot) => {
+    let g = groups.get(key);
+    if (!g) {
+      g = { label, sub, shots: [], scenes: new Set() };
+      groups.set(key, g);
+    }
+    g.shots.push(shot);
+    g.scenes.add(shot.sceneId);
+  };
+
   for (const shot of shots) {
     const names = castNames(shot.castNotes);
-    const raws = names.length > 0 ? names : [NO_CAST];
-    for (const raw of raws) {
-      const { key, label, sub } = resolveCast(raw, byChar, byName);
-      let g = groups.get(key);
-      if (!g) {
-        g = { label, sub, shots: [], scenes: new Set() };
-        groups.set(key, g);
-      }
-      g.shots.push(shot);
-      g.scenes.add(shot.sceneId);
+    if (names.length === 0) {
+      add(NO_CAST, NO_CAST, null, shot);
+      continue;
+    }
+    // Resolve and de-dupe the shot's distinct cast.
+    const resolved = new Map<string, { label: string; sub: string | null }>();
+    for (const raw of names) {
+      const r = resolveCast(raw, byChar, byName);
+      if (!resolved.has(r.key)) resolved.set(r.key, { label: r.label, sub: r.sub });
+    }
+    if (resolved.size === 1) {
+      const [[, only]] = [...resolved.entries()];
+      add("solo:" + only.label.toLowerCase(), only.label, only.sub, shot);
+    } else {
+      add(TOGETHER, TOGETHER, [...resolved.values()].map((r) => r.label).join(", "), shot);
     }
   }
 
@@ -176,13 +196,16 @@ function groupShotsByCast(shots: Shot[], cast: CastRef[]): CastGroup[] {
     .map((g) => ({
       key: g.label + (g.sub ?? ""),
       label: g.label,
-      sub: g.sub,
+      sub: g.label === TOGETHER ? null : g.sub,
       shots: g.shots,
       sceneCount: g.scenes.size,
     }))
     .sort((a, b) => {
-      if (a.label === NO_CAST) return 1;
-      if (b.label === NO_CAST) return -1;
+      // Order: individual characters (busiest first), then Together, then Unassigned.
+      const rank = (l: string) => (l === NO_CAST ? 2 : l === TOGETHER ? 1 : 0);
+      const ra = rank(a.label);
+      const rb = rank(b.label);
+      if (ra !== rb) return ra - rb;
       return b.shots.length - a.shots.length || a.label.localeCompare(b.label);
     });
 }
@@ -193,15 +216,20 @@ export function ShotListBoard({
   initialScenes,
   initialShots,
   cast = [],
+  initialCameraSetup = "single",
 }: {
   projectId: number;
   canEdit: boolean;
   initialScenes: Scene[];
   initialShots: Shot[];
   cast?: CastRef[];
+  initialCameraSetup?: string;
 }) {
   const [scenes, setScenes] = useState<Scene[]>(initialScenes);
   const [shots, setShots] = useState<Shot[]>(initialShots);
+  const [cameraSetup, setCameraSetup] = useState(
+    initialCameraSetup === "dual" ? "dual" : "single"
+  );
 
   const [sceneDialog, setSceneDialog] = useState<{ open: boolean; scene: Scene | null }>({
     open: false,
@@ -233,6 +261,26 @@ export function ShotListBoard({
 
   const api = `/api/projects/${projectId}`;
 
+  // ---- Camera setup ("filming on") ----
+  async function changeCameraSetup(next: string) {
+    const prev = cameraSetup;
+    setCameraSetup(next); // optimistic
+    try {
+      const res = await fetch(api, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cameraSetup: next }),
+      });
+      if (!res.ok) {
+        setCameraSetup(prev);
+        toast("Couldn't save the camera setup.", "error");
+      }
+    } catch {
+      setCameraSetup(prev);
+      toast("Network error. Please try again.", "error");
+    }
+  }
+
   // ---- Build scenes + shots from the saved script (local parsing, no cost) ----
   async function generateScenesFromScript(mode: "action" | "dialogue" | "both") {
     setGenerating(true);
@@ -240,7 +288,7 @@ export function ShotListBoard({
       const res = await fetch(`${api}/scenes/from-script`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify({ mode, cameraSetup }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -476,6 +524,19 @@ export function ShotListBoard({
         </div>
         {canEdit && (
           <div className="flex items-center gap-2 flex-wrap print:hidden">
+            <label className="flex items-center gap-1.5 text-sm text-slate-600">
+              <Video className="h-4 w-4 text-slate-400" />
+              <span className="hidden sm:inline">Filming on</span>
+              <select
+                className={selectClass + " w-auto"}
+                value={cameraSetup}
+                onChange={(e) => changeCameraSetup(e.target.value)}
+                title="What you're filming on. One camera shoots one person per shot; two cameras can hold characters together."
+              >
+                <option value="single">iPhone / 1 camera</option>
+                <option value="dual">2 cameras</option>
+              </select>
+            </label>
             <Button
               variant="outline"
               size="sm"

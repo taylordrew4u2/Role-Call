@@ -20,6 +20,10 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const body = await request.json().catch(() => ({}));
   const mode: ShotMode =
     body?.mode === "dialogue" || body?.mode === "both" ? body.mode : "action";
+  // Single-camera (iPhone) shoots one person per shot; two cameras can hold
+  // characters together. Body can override the project's saved setting.
+  const setup = body?.cameraSetup ?? access.project.cameraSetup ?? "single";
+  const singleCamera = setup !== "dual";
   let content: string = (body?.content ?? "").toString();
   if (!content.trim()) {
     const [script] = await db
@@ -66,7 +70,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   let shotOrder = existingShots.length;
 
   const shotRows = createdScenes.flatMap((scene, i) =>
-    buildShotsForScene(parsed[i], { mode }).map((shot) => ({
+    buildShotsForScene(parsed[i], { mode, singleCamera }).map((shot) => ({
       projectId: access.id,
       sceneId: scene.id,
       shotNumber: shot.shotNumber,
