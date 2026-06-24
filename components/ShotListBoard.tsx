@@ -128,12 +128,12 @@ function groupShotsByCast(shots: Shot[]): { name: string; shots: Shot[] }[] {
 
 export function ShotListBoard({
   projectId,
-  isOwner,
+  canEdit,
   initialScenes,
   initialShots,
 }: {
   projectId: number;
-  isOwner: boolean;
+  canEdit: boolean;
   initialScenes: Scene[];
   initialShots: Shot[];
 }) {
@@ -387,7 +387,7 @@ export function ShotListBoard({
           <Clapperboard className="h-5 w-5 text-slate-400 print:hidden" />
           <h2 className="text-lg font-semibold text-slate-900">Scenes &amp; Shot List</h2>
         </div>
-        {isOwner && (
+        {canEdit && (
           <div className="flex items-center gap-2 flex-wrap print:hidden">
             <Button
               variant="outline"
@@ -429,7 +429,7 @@ export function ShotListBoard({
       </div>
 
       {/* Mass-selection action bar */}
-      {isOwner && selectMode && (
+      {canEdit && selectMode && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm print:hidden">
           <div className="flex items-center gap-3">
             <span className="font-medium text-slate-700">
@@ -528,7 +528,7 @@ export function ShotListBoard({
           <Film className="h-8 w-8 text-slate-300 mx-auto mb-2" />
           <p className="text-sm text-slate-500">
             No shots yet.{" "}
-            {isOwner
+            {canEdit
               ? "Add a scene, or use “Paste shots” to enter a list of shots as text."
               : ""}
           </p>
@@ -543,7 +543,7 @@ export function ShotListBoard({
               key={scene.id}
               scene={scene}
               shots={shots.filter((s) => s.sceneId === scene.id)}
-              isOwner={isOwner}
+              canEdit={canEdit}
               selection={selection}
               onEditScene={() => setSceneDialog({ open: true, scene })}
               onDeleteScene={() => deleteScene(scene)}
@@ -557,7 +557,7 @@ export function ShotListBoard({
             <SceneCard
               scene={null}
               shots={unlinkedShots}
-              isOwner={isOwner}
+              canEdit={canEdit}
               selection={selection}
               onEditScene={() => {}}
               onDeleteScene={() => {}}
@@ -567,7 +567,7 @@ export function ShotListBoard({
             />
           )}
 
-          {isOwner && scenes.length > 0 && (
+          {canEdit && scenes.length > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -596,7 +596,7 @@ export function ShotListBoard({
               <FlatShotTable
                 shots={group.shots}
                 sceneName={sceneName}
-                isOwner={isOwner}
+                canEdit={canEdit}
                 selection={selection}
                 onEditShot={(shot) =>
                   setShotDialog({ open: true, shot, sceneId: shot.sceneId })
@@ -613,7 +613,7 @@ export function ShotListBoard({
         <FlatShotTable
           shots={shots}
           sceneName={sceneName}
-          isOwner={isOwner}
+          canEdit={canEdit}
           selection={selection}
           onEditShot={(shot) =>
             setShotDialog({ open: true, shot, sceneId: shot.sceneId })
@@ -630,7 +630,7 @@ export function ShotListBoard({
               key={shot.id}
               shot={shot}
               sceneName={sceneName(shot.sceneId)}
-              isOwner={isOwner}
+              canEdit={canEdit}
               selection={selection}
               onEdit={() => setShotDialog({ open: true, shot, sceneId: shot.sceneId })}
               onDelete={() => deleteShot(shot)}
@@ -677,7 +677,7 @@ export function ShotListBoard({
 function SceneCard({
   scene,
   shots,
-  isOwner,
+  canEdit,
   selection,
   onEditScene,
   onDeleteScene,
@@ -687,7 +687,7 @@ function SceneCard({
 }: {
   scene: Scene | null;
   shots: Shot[];
-  isOwner: boolean;
+  canEdit: boolean;
   selection: Selection;
   onEditScene: () => void;
   onDeleteScene: () => void;
@@ -720,7 +720,7 @@ function SceneCard({
             <p className="text-sm text-slate-500 mt-1">{scene.synopsis}</p>
           )}
         </div>
-        {isOwner && (
+        {canEdit && (
           <div className="flex items-center gap-1 shrink-0">
             <Button size="sm" variant="ghost" onClick={onAddShot}>
               <Plus className="h-4 w-4" />
@@ -746,7 +746,7 @@ function SceneCard({
           <Table>
             <TableHeader>
               <TableRow>
-                {isOwner && selection.mode && <TableHead className="w-10" />}
+                {canEdit && selection.mode && <TableHead className="w-10" />}
                 <TableHead className="w-14">#</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-16">Size</TableHead>
@@ -754,7 +754,7 @@ function SceneCard({
                 <TableHead className="w-24">Move</TableHead>
                 <TableHead className="w-20">Lens</TableHead>
                 <TableHead className="w-24">Status</TableHead>
-                {isOwner && !selection.mode && <TableHead className="w-20" />}
+                {canEdit && !selection.mode && <TableHead className="w-20" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -767,7 +767,7 @@ function SceneCard({
                       : undefined
                   }
                 >
-                  {isOwner && selection.mode && (
+                  {canEdit && selection.mode && (
                     <TableCell>
                       <SelectBox
                         checked={selection.selected.has(shot.id)}
@@ -787,7 +787,7 @@ function SceneCard({
                   <TableCell>{shot.movement || "—"}</TableCell>
                   <TableCell>{shot.lens || "—"}</TableCell>
                   <TableCell>{statusBadge(shot.status)}</TableCell>
-                  {isOwner && !selection.mode && (
+                  {canEdit && !selection.mode && (
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button size="sm" variant="ghost" onClick={() => onEditShot(shot)}>
@@ -1044,14 +1044,14 @@ function ShotDialog({
 function FlatShotTable({
   shots,
   sceneName,
-  isOwner,
+  canEdit,
   selection,
   onEditShot,
   onDeleteShot,
 }: {
   shots: Shot[];
   sceneName: (sceneId: number | null) => string;
-  isOwner: boolean;
+  canEdit: boolean;
   selection: Selection;
   onEditShot: (shot: Shot) => void;
   onDeleteShot: (shot: Shot) => void;
@@ -1061,7 +1061,7 @@ function FlatShotTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {isOwner && selection.mode && <TableHead className="w-10" />}
+            {canEdit && selection.mode && <TableHead className="w-10" />}
             <TableHead className="w-14">#</TableHead>
             <TableHead>Scene</TableHead>
             <TableHead>Description</TableHead>
@@ -1070,7 +1070,7 @@ function FlatShotTable({
             <TableHead className="w-24">Move</TableHead>
             <TableHead className="w-20">Lens</TableHead>
             <TableHead className="w-24">Status</TableHead>
-            {isOwner && !selection.mode && <TableHead className="w-20" />}
+            {canEdit && !selection.mode && <TableHead className="w-20" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -1083,7 +1083,7 @@ function FlatShotTable({
                   : undefined
               }
             >
-              {isOwner && selection.mode && (
+              {canEdit && selection.mode && (
                 <TableCell>
                   <SelectBox
                     checked={selection.selected.has(shot.id)}
@@ -1101,7 +1101,7 @@ function FlatShotTable({
               <TableCell>{shot.movement || "—"}</TableCell>
               <TableCell>{shot.lens || "—"}</TableCell>
               <TableCell>{statusBadge(shot.status)}</TableCell>
-              {isOwner && !selection.mode && (
+              {canEdit && !selection.mode && (
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <Button size="sm" variant="ghost" onClick={() => onEditShot(shot)}>
@@ -1124,14 +1124,14 @@ function FlatShotTable({
 function ShotCard({
   shot,
   sceneName,
-  isOwner,
+  canEdit,
   selection,
   onEdit,
   onDelete,
 }: {
   shot: Shot;
   sceneName: string;
-  isOwner: boolean;
+  canEdit: boolean;
   selection: Selection;
   onEdit: () => void;
   onDelete: () => void;
@@ -1149,7 +1149,7 @@ function ShotCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          {isOwner && selection.mode && (
+          {canEdit && selection.mode && (
             <SelectBox checked={isSelected} onChange={() => selection.toggle(shot.id)} />
           )}
           <span className="font-semibold text-slate-900">
@@ -1171,7 +1171,7 @@ function ShotCard({
           ))}
         </div>
       )}
-      {isOwner && !selection.mode && (
+      {canEdit && !selection.mode && (
         <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-slate-100">
           <Button size="sm" variant="ghost" onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5" />

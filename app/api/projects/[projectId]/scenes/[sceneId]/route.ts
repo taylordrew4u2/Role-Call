@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { scenes } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import { requireProjectOwner } from "@/lib/project-access";
+import { requireProjectDirector } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string; sceneId: string }>;
 
@@ -18,7 +18,7 @@ const FIELDS = [
 // PATCH /api/projects/[projectId]/scenes/[sceneId]
 export async function PATCH(request: Request, { params }: { params: Params }) {
   const { projectId, sceneId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
   const sid = parseInt(sceneId, 10);
@@ -45,7 +45,7 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
 // DELETE /api/projects/[projectId]/scenes/[sceneId]
 export async function DELETE(_request: Request, { params }: { params: Params }) {
   const { projectId, sceneId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
   const sid = parseInt(sceneId, 10);

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { shots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getProjectAccess, requireProjectOwner } from "@/lib/project-access";
+import { getProjectAccess, requireProjectDirector } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -22,7 +22,7 @@ export async function GET(_request: Request, { params }: { params: Params }) {
 // POST /api/projects/[projectId]/shots — create a shot
 export async function POST(request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
   const body = await request.json();

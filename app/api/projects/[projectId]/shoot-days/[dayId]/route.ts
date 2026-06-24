@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { shootDays } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import { requireProjectOwner } from "@/lib/project-access";
+import { requireProjectDirector } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string; dayId: string }>;
 
@@ -17,7 +17,7 @@ const FIELDS = [
 // PATCH /api/projects/[projectId]/shoot-days/[dayId]
 export async function PATCH(request: Request, { params }: { params: Params }) {
   const { projectId, dayId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
   const id = parseInt(dayId, 10);
@@ -44,7 +44,7 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
 // DELETE /api/projects/[projectId]/shoot-days/[dayId]
 export async function DELETE(_request: Request, { params }: { params: Params }) {
   const { projectId, dayId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
   const id = parseInt(dayId, 10);
