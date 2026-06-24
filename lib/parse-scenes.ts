@@ -284,6 +284,11 @@ function isSectionHeader(line: string): boolean {
  * Returns null when there's nothing dialogue-like to find, so the caller can
  * fall back to paragraph chunking for pure prose.
  */
+// A long, unbroken stretch of dialogue (a Zoom call, an interview) is split
+// into scenes of about this many beats so the generated shot list covers the
+// whole script instead of collapsing the entire conversation into one scene.
+const MAX_BEATS_PER_SCENE = 8;
+
 function dialogueAwareFallback(lines: string[]): ParsedScene[] | null {
   const scenes: ParsedScene[] = [];
   let current: ParsedScene | null = null;
@@ -291,9 +296,22 @@ function dialogueAwareFallback(lines: string[]): ParsedScene[] | null {
   let auto = 0;
   let sawDialogue = false;
   let sawSection = false;
+  // The current section's label and how many continuation parts we've opened.
+  let baseLabel: string | null = null;
+  let part = 0;
+  // Beats in the current scene — tracked separately so we can split long runs
+  // without tripping TypeScript's closure narrowing on `current`.
+  let beats = 0;
 
-  const startScene = (heading: string) => {
+  const openScene = (continuation: boolean) => {
     auto += 1;
+    part = continuation ? part + 1 : 1;
+    beats = 0;
+    const heading = baseLabel
+      ? continuation
+        ? `${baseLabel} — Part ${part}`
+        : baseLabel
+      : `Scene ${auto}`;
     const { location, timeOfDay } = splitLocationTime(heading);
     current = {
       sceneNumber: String(auto),
@@ -325,12 +343,15 @@ function dialogueAwareFallback(lines: string[]): ParsedScene[] | null {
     // section header so dialogue is captured, not turned into an empty scene.
     const sp = matchSpeaker(line);
     if (sp) {
-      if (!current) startScene("Scene 1");
+      if (!current || beats >= MAX_BEATS_PER_SCENE) {
+        openScene(Boolean(current)); // continuation when a scene is already open
+      }
       speaker = sp.name;
       if (sp.inline) {
         const spoken = stripWrylies(sp.inline);
         if (spoken) {
           current!.dialogue.push({ character: speaker, text: spoken });
+          beats += 1;
           sawDialogue = true;
         }
       }
@@ -339,16 +360,18 @@ function dialogueAwareFallback(lines: string[]): ParsedScene[] | null {
 
     if (isSectionHeader(line)) {
       sawSection = true;
-      startScene(line);
+      baseLabel = line;
+      openScene(false);
       continue;
     }
 
-    if (!current) startScene("Scene 1");
+    if (!current) openScene(false);
 
     if (speaker) {
       const spoken = stripWrylies(line);
       if (spoken) {
         current!.dialogue.push({ character: speaker, text: spoken });
+        beats += 1;
         sawDialogue = true;
       }
       continue;

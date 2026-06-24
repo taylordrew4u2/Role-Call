@@ -282,25 +282,33 @@ export function ShotListBoard({
   }
 
   // ---- Build scenes + shots from the saved script (local parsing, no cost) ----
+  // Regenerating replaces the existing scenes & shots so it doesn't pile up
+  // duplicates each time it's run.
   async function generateScenesFromScript(mode: "action" | "dialogue" | "both") {
+    if (
+      shots.length > 0 &&
+      !confirm("Regenerate from the script? This replaces the current scenes and shots.")
+    ) {
+      return;
+    }
     setGenerating(true);
     try {
       const res = await fetch(`${api}/scenes/from-script`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, cameraSetup }),
+        body: JSON.stringify({ mode, cameraSetup, replace: true }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast(data.error ?? "Couldn't read the script.", "error");
         return;
       }
-      setScenes((s) => [...s, ...(data.scenes ?? [])]);
-      setShots((s) => [...s, ...(data.shots ?? [])]);
+      setScenes(data.scenes ?? []);
+      setShots(data.shots ?? []);
       const sceneCount = data.scenes?.length ?? 0;
       const shotCount = data.shots?.length ?? 0;
       toast(
-        `Added ${sceneCount} scene${sceneCount === 1 ? "" : "s"} and ${shotCount} shot${shotCount === 1 ? "" : "s"} from the script.`
+        `Generated ${sceneCount} scene${sceneCount === 1 ? "" : "s"} and ${shotCount} shot${shotCount === 1 ? "" : "s"} from the script.`
       );
       setGenerateOpen(false);
     } catch {
