@@ -207,6 +207,60 @@ function stripWrylies(line: string): string {
     .trim();
 }
 
+// Single-word "Label:" lines that introduce something but aren't speakers.
+const NON_SPEAKER_LABELS = new Set([
+  "INT", "EXT", "EST", "LATER", "MEANWHILE", "NOTE", "NOTES", "CUT", "FADE",
+  "SUPER", "TITLE", "SCENE", "ACT", "PAGE", "CONTINUED", "MONTAGE", "INSERT",
+  "FLASHBACK", "TIME", "DAY", "NIGHT", "MORNING", "EVENING", "BEAT",
+]);
+
+interface SpeakerMatch {
+  name: string;
+  /** Dialogue that appeared on the same line after a colon, if any. */
+  inline: string;
+}
+
+// True for a token that's all-caps ("GREGGO") or Title-case ("Greggo",
+// "Mary Jane") — i.e. it reads like a name, not a sentence fragment.
+function isNameLike(name: string): boolean {
+  if (!name) return false;
+  if (NON_SPEAKER_LABELS.has(name.toUpperCase())) return false;
+  const words = name.split(/\s+/);
+  if (words.length > 3 || name.length > 30) return false;
+  for (const w of words) {
+    if (!/^[A-Za-z][A-Za-z.'’#0-9-]*$/.test(w)) return false;
+  }
+  const allCaps = name === name.toUpperCase() && /[A-Z]/.test(name);
+  const titleCase = words.every((w) => /^[A-Z]/.test(w));
+  return allCaps || titleCase;
+}
+
+/**
+ * Detect a character cue and any dialogue that follows a colon. Handles the
+ * common formats people actually paste:
+ *   JOHN                → { name: "JOHN", inline: "" }
+ *   MARY (CONT'D)       → { name: "MARY", inline: "" }
+ *   Greggo:             → { name: "Greggo", inline: "" }
+ *   GREGGO: Hey there.  → { name: "GREGGO", inline: "Hey there." }
+ * Multi-word labels like "GREGGO GETS ON ZOOM:" are NOT speakers.
+ */
+function matchSpeaker(line: string): SpeakerMatch | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  // "Name:" or "Name: dialogue" — split on the first colon.
+  const colon = trimmed.match(/^([^:]{1,40}?)\s*:\s*(.*)$/);
+  if (colon) {
+    const name = colon[1].replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
+    if (isNameLike(name)) return { name, inline: colon[2].trim() };
+    return null;
+  }
+
+  // Bare all-caps cue with no colon.
+  if (isCharacterCue(trimmed)) return { name: cueName(trimmed), inline: "" };
+  return null;
+}
+
 // Transitions in a slug-less script — ignored rather than turned into scenes.
 const FALLBACK_TRANSITION =
   /^(?:CUT|SMASH CUT|MATCH CUT|HARD CUT|QUICK CUT|JUMP CUT|TIME CUT|DISSOLVE|FADE (?:IN|OUT|TO)|WIPE|BACK TO)\b.*:?$/i;
@@ -267,6 +321,22 @@ function dialogueAwareFallback(lines: string[]): ParsedScene[] | null {
       continue;
     }
 
+    // A speaker cue ("GREGGO", "Greggo:", "GREGGO: line") takes priority over a
+    // section header so dialogue is captured, not turned into an empty scene.
+    const sp = matchSpeaker(line);
+    if (sp) {
+      if (!current) startScene("Scene 1");
+      speaker = sp.name;
+      if (sp.inline) {
+        const spoken = stripWrylies(sp.inline);
+        if (spoken) {
+          current!.dialogue.push({ character: speaker, text: spoken });
+          sawDialogue = true;
+        }
+      }
+      continue;
+    }
+
     if (isSectionHeader(line)) {
       sawSection = true;
       startScene(line);
@@ -274,11 +344,6 @@ function dialogueAwareFallback(lines: string[]): ParsedScene[] | null {
     }
 
     if (!current) startScene("Scene 1");
-
-    if (isCharacterCue(line)) {
-      speaker = cueName(line);
-      continue;
-    }
 
     if (speaker) {
       const spoken = stripWrylies(line);
@@ -339,9 +404,15 @@ export function parseScenesFromScript(text: string): ParsedScene[] {
 
     if (!current) continue;
 
-    // A new character cue starts (or switches) a dialogue block.
-    if (isCharacterCue(line)) {
-      speaker = cueName(line);
+    // A character cue (incl. "NAME:" / "NAME: inline dialogue") starts or
+    // switches a dialogue block.
+    const sp = matchSpeaker(line);
+    if (sp) {
+      speaker = sp.name;
+      if (sp.inline) {
+        const spoken = stripWrylies(sp.inline);
+        if (spoken) current.dialogue.push({ character: speaker, text: spoken });
+      }
       continue;
     }
 
