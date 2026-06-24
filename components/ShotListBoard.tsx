@@ -846,9 +846,9 @@ function SceneCard({
                   <TableCell className="font-medium">{shot.shotNumber || "—"}</TableCell>
                   <TableCell className="max-w-xs">
                     {shot.description || <span className="text-slate-400">—</span>}
-                    {shot.castNotes && (
-                      <span className="block text-xs text-slate-400">Cast: {shot.castNotes}</span>
-                    )}
+                    <span className="block text-xs text-slate-400">
+                      Cast: {shot.castNotes?.trim() || "—"}
+                    </span>
                   </TableCell>
                   <TableCell>{shot.shotSize || "—"}</TableCell>
                   <TableCell>{shot.angle || "—"}</TableCell>
@@ -1163,7 +1163,12 @@ function FlatShotTable({
               <TableCell className="text-xs text-slate-500">
                 {sceneName(shot.sceneId) || "—"}
               </TableCell>
-              <TableCell>{shot.description || <span className="text-slate-400">—</span>}</TableCell>
+              <TableCell>
+                {shot.description || <span className="text-slate-400">—</span>}
+                <span className="block text-xs text-slate-400">
+                  Cast: {shot.castNotes?.trim() || "—"}
+                </span>
+              </TableCell>
               <TableCell>{shot.shotSize || "—"}</TableCell>
               <TableCell>{shot.angle || "—"}</TableCell>
               <TableCell>{shot.movement || "—"}</TableCell>
@@ -1229,6 +1234,9 @@ function ShotCard({
       {sceneName && <p className="text-xs text-slate-400 mt-0.5">{sceneName}</p>}
       <p className="text-sm text-slate-700 mt-2 flex-1">
         {shot.description || <span className="text-slate-400">No description</span>}
+      </p>
+      <p className="text-xs text-slate-400 mt-1">
+        Cast: {shot.castNotes?.trim() || "—"}
       </p>
       {specs.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
