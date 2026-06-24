@@ -93,6 +93,21 @@ function statusBadge(status: string) {
 
 const NO_CAST = "Unassigned";
 
+interface CastRef {
+  character: string | null;
+  displayName: string;
+}
+
+interface CastGroup {
+  key: string;
+  /** Primary label — the actor's name when known, otherwise the cast note. */
+  label: string;
+  /** Secondary line, e.g. "as DETECTIVE MARA", or null. */
+  sub: string | null;
+  shots: Shot[];
+  sceneCount: number;
+}
+
 // Split a free-text cast note ("John, Mary & extras") into individual names so
 // a shot can appear under every actor it features.
 function castNames(castNotes: string | null): string[] {
@@ -103,27 +118,73 @@ function castNames(castNotes: string | null): string[] {
     .filter(Boolean);
 }
 
+// Resolve a raw cast note to a canonical group: prefer matching a real cast
+// member (by character or actor name, case-insensitively) so coverage tagged
+// with a character ("MARA") collapses under the actor playing them, shown as
+// "Alex Rivera — as MARA".
+function resolveCast(
+  raw: string,
+  byChar: Map<string, CastRef>,
+  byName: Map<string, CastRef>
+): { key: string; label: string; sub: string | null } {
+  if (raw === NO_CAST) return { key: NO_CAST, label: NO_CAST, sub: null };
+  const norm = raw.trim().toLowerCase();
+  const member = byChar.get(norm) ?? byName.get(norm);
+  if (member && member.displayName.trim()) {
+    const character = member.character?.trim();
+    return {
+      key: "actor:" + member.displayName.trim().toLowerCase(),
+      label: member.displayName.trim(),
+      sub: character ? `as ${character}` : null,
+    };
+  }
+  // No actor yet (or an unknown name): group case-insensitively by the note.
+  return { key: "name:" + norm, label: raw.trim(), sub: null };
+}
+
 // Group shots by cast member. A shot with multiple names appears under each;
-// shots with no cast fall under "Unassigned".
-function groupShotsByCast(shots: Shot[]): { name: string; shots: Shot[] }[] {
-  const groups = new Map<string, Shot[]>();
+// shots with no cast fall under "Unassigned". Groups are ordered by how many
+// shots feature them (the busiest cast first) so it reads like a day's workload.
+function groupShotsByCast(shots: Shot[], cast: CastRef[]): CastGroup[] {
+  const byChar = new Map<string, CastRef>();
+  const byName = new Map<string, CastRef>();
+  for (const m of cast) {
+    if (m.character?.trim()) byChar.set(m.character.trim().toLowerCase(), m);
+    if (m.displayName.trim()) byName.set(m.displayName.trim().toLowerCase(), m);
+  }
+
+  const groups = new Map<
+    string,
+    { label: string; sub: string | null; shots: Shot[]; scenes: Set<number | null> }
+  >();
   for (const shot of shots) {
     const names = castNames(shot.castNotes);
-    const keys = names.length > 0 ? names : [NO_CAST];
-    for (const key of keys) {
-      const list = groups.get(key);
-      if (list) list.push(shot);
-      else groups.set(key, [shot]);
+    const raws = names.length > 0 ? names : [NO_CAST];
+    for (const raw of raws) {
+      const { key, label, sub } = resolveCast(raw, byChar, byName);
+      let g = groups.get(key);
+      if (!g) {
+        g = { label, sub, shots: [], scenes: new Set() };
+        groups.set(key, g);
+      }
+      g.shots.push(shot);
+      g.scenes.add(shot.sceneId);
     }
   }
-  // Sort actors alphabetically, with "Unassigned" last.
-  return [...groups.entries()]
-    .sort(([a], [b]) => {
-      if (a === NO_CAST) return 1;
-      if (b === NO_CAST) return -1;
-      return a.localeCompare(b);
-    })
-    .map(([name, shots]) => ({ name, shots }));
+
+  return [...groups.values()]
+    .map((g) => ({
+      key: g.label + (g.sub ?? ""),
+      label: g.label,
+      sub: g.sub,
+      shots: g.shots,
+      sceneCount: g.scenes.size,
+    }))
+    .sort((a, b) => {
+      if (a.label === NO_CAST) return 1;
+      if (b.label === NO_CAST) return -1;
+      return b.shots.length - a.shots.length || a.label.localeCompare(b.label);
+    });
 }
 
 export function ShotListBoard({
@@ -131,11 +192,13 @@ export function ShotListBoard({
   canEdit,
   initialScenes,
   initialShots,
+  cast = [],
 }: {
   projectId: number;
   canEdit: boolean;
   initialScenes: Scene[];
   initialShots: Shot[];
+  cast?: CastRef[];
 }) {
   const [scenes, setScenes] = useState<Scene[]>(initialScenes);
   const [shots, setShots] = useState<Shot[]>(initialShots);
@@ -582,15 +645,20 @@ export function ShotListBoard({
       {/* By Cast view — shots grouped by actor / character */}
       {viewMode === "actor" && hasShots && (
         <div className="space-y-6">
-          {groupShotsByCast(shots).map((group) => (
-            <div key={group.name} className="space-y-2">
-              <div className="flex items-center gap-2 px-1">
-                <Users className="h-4 w-4 text-slate-400" />
+          {groupShotsByCast(shots, cast).map((group) => (
+            <div key={group.key} className="space-y-2">
+              <div className="flex items-baseline gap-2 px-1">
+                <Users className="h-4 w-4 text-slate-400 self-center" />
                 <h3 className="font-semibold text-slate-900">
-                  {group.name === NO_CAST ? "Unassigned (no cast)" : group.name}
+                  {group.label === NO_CAST ? "Unassigned (no cast)" : group.label}
                 </h3>
+                {group.sub && (
+                  <span className="text-xs text-slate-400 italic">{group.sub}</span>
+                )}
                 <span className="text-xs text-slate-400">
                   {group.shots.length} shot{group.shots.length === 1 ? "" : "s"}
+                  {group.sceneCount > 0 &&
+                    ` · ${group.sceneCount} scene${group.sceneCount === 1 ? "" : "s"}`}
                 </span>
               </div>
               <FlatShotTable
