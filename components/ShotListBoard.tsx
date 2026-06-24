@@ -1281,12 +1281,12 @@ function GenerateFromScriptDialog({
     {
       id: "dialogue",
       title: "Dialogue coverage",
-      desc: "An establishing shot plus one shot for each character's line of dialogue.",
+      desc: "Establishing, a master/two-shot, OTS singles for each speaker, and CUs on principals.",
     },
     {
       id: "both",
       title: "Full coverage",
-      desc: "Establishing, action beats, and a shot per line of dialogue.",
+      desc: "Establishing, action beats, plus full dialogue coverage (master, OTS, CUs).",
     },
   ];
 

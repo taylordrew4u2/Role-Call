@@ -67,6 +67,97 @@ function establishingSize(intExt: string): string {
   return "WS";
 }
 
+/** Trim a quoted line to a readable length for a shot description. */
+function snippet(text: string, n = 60): string {
+  const t = text.replace(/\s+/g, " ").trim();
+  return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
+}
+
+/**
+ * Build proper dialogue coverage for a scene instead of one repetitive shot per
+ * line. Mirrors how a scene is really covered:
+ *   • a master/two-shot establishing the exchange,
+ *   • an over-the-shoulder single favoring each speaker,
+ *   • a clean CU on each principal (anyone with more than one line).
+ * Consecutive lines by the same person collapse into that person's coverage, so
+ * a 20-line two-hander yields ~5 purposeful shots rather than 20 near-duplicates.
+ */
+function dialogueCoverage(scene: ParsedScene): Omit<GeneratedShot, "shotNumber">[] {
+  const beats = scene.dialogue;
+  if (!beats.length) return [];
+
+  // Distinct speakers in order of first appearance, with line counts and a
+  // representative (longest, most substantive) line each.
+  const order: string[] = [];
+  const count = new Map<string, number>();
+  const rep = new Map<string, string>();
+  for (const { character, text } of beats) {
+    const c = character.replace(/\s+/g, " ").trim();
+    if (!c) continue;
+    if (!count.has(c)) order.push(c);
+    count.set(c, (count.get(c) ?? 0) + 1);
+    if ((text?.length ?? 0) > (rep.get(c)?.length ?? 0)) rep.set(c, text);
+  }
+  if (!order.length) return [];
+
+  const quote = (c: string) => {
+    const line = rep.get(c);
+    return line ? ` — “${snippet(line)}”` : "";
+  };
+  const out: Omit<GeneratedShot, "shotNumber">[] = [];
+
+  // Single speaker (monologue, phone call, to-camera): MS then CU.
+  if (order.length === 1) {
+    const c = order[0];
+    out.push({
+      description: `${c} — dialogue${quote(c)}`,
+      shotSize: "MS",
+      angle: "Eye-level",
+      movement: "Static",
+      castNotes: c,
+    });
+    out.push({
+      description: `CU — ${c}`,
+      shotSize: "CU",
+      angle: "Eye-level",
+      movement: "Static",
+      castNotes: c,
+    });
+    return out;
+  }
+
+  // Master establishing the exchange (two-shot for a pair, wider for a group).
+  out.push({
+    description: `Dialogue master — ${order.join(" / ")}`,
+    shotSize: order.length === 2 ? "MWS" : "WS",
+    angle: "Eye-level",
+    movement: "Static",
+    castNotes: order.join(", "),
+  });
+
+  // Per speaker: an OTS single, plus a CU for principals (more than one line).
+  for (const c of order) {
+    out.push({
+      description: `OTS favoring ${c}${quote(c)}`,
+      shotSize: "OTS",
+      angle: "Eye-level",
+      movement: "Static",
+      castNotes: c,
+    });
+    if ((count.get(c) ?? 0) >= 2) {
+      out.push({
+        description: `CU — ${c}`,
+        shotSize: "CU",
+        angle: "Eye-level",
+        movement: "Static",
+        castNotes: c,
+      });
+    }
+  }
+
+  return out;
+}
+
 /**
  * Infer a shot list for a single scene. Always returns at least one shot (an
  * establishing shot), so converting a script never produces an empty scene —
@@ -110,18 +201,11 @@ export function buildShotsForScene(
     }
   }
 
-  // 3) One coverage shot per line of dialogue — a single on the speaker.
+  // 3) Proper dialogue coverage: master + OTS singles + CUs on principals.
   if (mode === "dialogue" || mode === "both") {
-    for (let i = 0; i < scene.dialogue.length && shots.length < max; i++) {
-      const { character, text } = scene.dialogue[i];
-      shots.push({
-        shotNumber: numFor(),
-        description: `${character}: “${text}”`.slice(0, 200),
-        shotSize: "CU",
-        angle: "Eye-level",
-        movement: "Static",
-        castNotes: character,
-      });
+    for (const cov of dialogueCoverage(scene)) {
+      if (shots.length >= max) break;
+      shots.push({ shotNumber: numFor(), ...cov, description: cov.description.slice(0, 200) });
     }
   }
 
