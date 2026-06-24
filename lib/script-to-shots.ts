@@ -158,6 +158,37 @@ function dialogueCoverage(scene: ParsedScene): Omit<GeneratedShot, "shotNumber">
   return out;
 }
 
+/** Distinct speaking characters in a scene, in order of first appearance. */
+function sceneCharacters(scene: ParsedScene): string[] {
+  const seen = new Set<string>();
+  const order: string[] = [];
+  for (const d of scene.dialogue) {
+    const c = d.character.replace(/\s+/g, " ").trim();
+    if (!c) continue;
+    const key = c.toUpperCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      order.push(c);
+    }
+  }
+  return order;
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Which of the scene's characters are named in a piece of text. Falls back to
+ * everyone in the scene when none are explicitly mentioned, so every shot still
+ * lists who's in it.
+ */
+function castFor(text: string, chars: string[]): string {
+  if (chars.length === 0) return "";
+  const named = chars.filter((c) => new RegExp(`\\b${escapeRegExp(c)}\\b`, "i").test(text));
+  return (named.length ? named : chars).join(", ");
+}
+
 /**
  * Infer a shot list for a single scene. Always returns at least one shot (an
  * establishing shot), so converting a script never produces an empty scene —
@@ -174,7 +205,11 @@ export function buildShotsForScene(
   const shots: GeneratedShot[] = [];
   const numFor = () => `${scene.sceneNumber || ""}${shotLetter(shots.length)}`;
 
-  // 1) Establishing shot of the location.
+  // Everyone who appears in this scene — used to tag every shot with its cast.
+  const chars = sceneCharacters(scene);
+  const allCast = chars.join(", ");
+
+  // 1) Establishing shot of the location (tagged with everyone in the scene).
   const place = scene.location || scene.heading;
   shots.push({
     shotNumber: numFor(),
@@ -182,6 +217,7 @@ export function buildShotsForScene(
     shotSize: establishingSize(scene.intExt),
     angle: scene.intExt === "EXT" ? "High" : "Eye-level",
     movement: "Static",
+    castNotes: allCast || undefined,
   });
 
   // 2) Coverage shots per action beat, with inferred camera fields.
@@ -197,6 +233,7 @@ export function buildShotsForScene(
         shotSize: guess.shotSize ?? "MS",
         angle: guess.angle ?? "Eye-level",
         movement: guess.movement ?? "Static",
+        castNotes: castFor(description, chars) || undefined,
       });
     }
   }
