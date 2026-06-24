@@ -291,7 +291,7 @@ export function ShotListBoard({
       Size: s.shotSize ?? "",
       Angle: s.angle ?? "",
       Movement: s.movement ?? "",
-      Lens: s.lens ?? "",
+      Character: s.castNotes ?? "",
       Description: s.description,
       Status: s.status,
     }));
@@ -318,7 +318,7 @@ export function ShotListBoard({
     const text = exportRows()
       .map(
         (r) =>
-          `${r.Scene ? r.Scene + " — " : ""}${r.Shot}. ${[r.Size, r.Angle, r.Movement, r.Lens]
+          `${r.Scene ? r.Scene + " — " : ""}${r.Shot}. ${[r.Size, r.Angle, r.Movement, r.Character]
             .filter(Boolean)
             .join(", ")}${r.Description ? " — " + r.Description : ""}`
       )
@@ -820,7 +820,7 @@ function SceneCard({
                 <TableHead className="w-16">Size</TableHead>
                 <TableHead className="w-24">Angle</TableHead>
                 <TableHead className="w-24">Move</TableHead>
-                <TableHead className="w-20">Lens</TableHead>
+                <TableHead className="w-28">Character</TableHead>
                 <TableHead className="w-24">Status</TableHead>
                 {canEdit && !selection.mode && <TableHead className="w-20" />}
               </TableRow>
@@ -846,14 +846,15 @@ function SceneCard({
                   <TableCell className="font-medium">{shot.shotNumber || "—"}</TableCell>
                   <TableCell className="max-w-xs">
                     {shot.description || <span className="text-slate-400">—</span>}
-                    <span className="block text-xs text-slate-400">
-                      Cast: {shot.castNotes?.trim() || "—"}
-                    </span>
                   </TableCell>
                   <TableCell>{shot.shotSize || "—"}</TableCell>
                   <TableCell>{shot.angle || "—"}</TableCell>
                   <TableCell>{shot.movement || "—"}</TableCell>
-                  <TableCell>{shot.lens || "—"}</TableCell>
+                  <TableCell
+                    className={shot.castNotes?.trim() ? "" : "text-amber-600"}
+                  >
+                    {shot.castNotes?.trim() || "Add"}
+                  </TableCell>
                   <TableCell>{statusBadge(shot.status)}</TableCell>
                   {canEdit && !selection.mode && (
                     <TableCell>
@@ -980,14 +981,22 @@ function ShotDialog({
   const [shotSize, setShotSize] = useState(shot?.shotSize ?? "");
   const [angle, setAngle] = useState(shot?.angle ?? "");
   const [movement, setMovement] = useState(shot?.movement ?? "");
-  const [lens, setLens] = useState(shot?.lens ?? "");
+  // Lens is preserved but no longer edited — the slot now holds Character.
+  const [lens] = useState(shot?.lens ?? "");
   const [equipment, setEquipment] = useState(shot?.equipment ?? "");
   const [castNotes, setCastNotes] = useState(shot?.castNotes ?? "");
   const [status, setStatus] = useState(shot?.status ?? "planned");
   const [notes, setNotes] = useState(shot?.notes ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function submit() {
+    // Every shot must say which character(s) are in it.
+    if (!castNotes.trim()) {
+      setError("Add the character(s) in this shot.");
+      return;
+    }
+    setError("");
     setSaving(true);
     await onSave(
       {
@@ -998,7 +1007,7 @@ function ShotDialog({
         movement,
         lens,
         equipment,
-        castNotes,
+        castNotes: castNotes.trim(),
         status,
         notes,
         sceneId: shot ? shot.sceneId : sceneId,
@@ -1079,8 +1088,12 @@ function ShotDialog({
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Lens</Label>
-              <Input value={lens} onChange={(e) => setLens(e.target.value)} placeholder="35mm" />
+              <Label>Character *</Label>
+              <Input
+                value={castNotes}
+                onChange={(e) => setCastNotes(e.target.value)}
+                placeholder="Who's in it"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1089,14 +1102,13 @@ function ShotDialog({
               <Input value={equipment} onChange={(e) => setEquipment(e.target.value)} placeholder="Tripod, slider…" />
             </div>
             <div className="space-y-1.5">
-              <Label>Cast</Label>
-              <Input value={castNotes} onChange={(e) => setCastNotes(e.target.value)} placeholder="Who's in it" />
+              <Label>Notes</Label>
+              <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything else…" />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>Notes</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything else…" />
-          </div>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{error}</p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -1136,7 +1148,7 @@ function FlatShotTable({
             <TableHead className="w-16">Size</TableHead>
             <TableHead className="w-24">Angle</TableHead>
             <TableHead className="w-24">Move</TableHead>
-            <TableHead className="w-20">Lens</TableHead>
+            <TableHead className="w-28">Character</TableHead>
             <TableHead className="w-24">Status</TableHead>
             {canEdit && !selection.mode && <TableHead className="w-20" />}
           </TableRow>
@@ -1165,14 +1177,13 @@ function FlatShotTable({
               </TableCell>
               <TableCell>
                 {shot.description || <span className="text-slate-400">—</span>}
-                <span className="block text-xs text-slate-400">
-                  Cast: {shot.castNotes?.trim() || "—"}
-                </span>
               </TableCell>
               <TableCell>{shot.shotSize || "—"}</TableCell>
               <TableCell>{shot.angle || "—"}</TableCell>
               <TableCell>{shot.movement || "—"}</TableCell>
-              <TableCell>{shot.lens || "—"}</TableCell>
+              <TableCell className={shot.castNotes?.trim() ? "" : "text-amber-600"}>
+                {shot.castNotes?.trim() || "Add"}
+              </TableCell>
               <TableCell>{statusBadge(shot.status)}</TableCell>
               {canEdit && !selection.mode && (
                 <TableCell>
@@ -1209,7 +1220,7 @@ function ShotCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const specs = [shot.shotSize, shot.angle, shot.movement, shot.lens].filter(Boolean);
+  const specs = [shot.shotSize, shot.angle, shot.movement].filter(Boolean);
   const isSelected = selection.selected.has(shot.id);
   return (
     <div
@@ -1235,8 +1246,12 @@ function ShotCard({
       <p className="text-sm text-slate-700 mt-2 flex-1">
         {shot.description || <span className="text-slate-400">No description</span>}
       </p>
-      <p className="text-xs text-slate-400 mt-1">
-        Cast: {shot.castNotes?.trim() || "—"}
+      <p
+        className={
+          "text-xs mt-1 " + (shot.castNotes?.trim() ? "text-slate-400" : "text-amber-600")
+        }
+      >
+        Character: {shot.castNotes?.trim() || "Add who's in it"}
       </p>
       {specs.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
@@ -1295,9 +1310,9 @@ function BulkAddDialog({
             this order:
           </p>
           <p className="text-xs text-slate-500 bg-slate-50 rounded-md px-3 py-2 font-mono">
-            number | size | angle | movement | lens | description
+            number | size | angle | movement | character | description
             <br />
-            1 | WS | Eye-level | Static | 35mm | Establishing shot of the diner
+            1 | WS | Eye-level | Static | JANE | Establishing shot of the diner
             <br />
             Close on the coffee cup as steam rises
           </p>
@@ -1317,7 +1332,7 @@ function BulkAddDialog({
             className="w-full min-h-[200px] rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={"1 | WS | | Dolly | | Wide of the kitchen\nCloser on the knife block\n..."}
+            placeholder={"1 | WS | | Dolly | JANE | Wide of the kitchen\nCloser on the knife block\n..."}
           />
         </div>
         <DialogFooter>

@@ -11,7 +11,7 @@ interface IncomingShot {
   shotSize?: string;
   angle?: string;
   movement?: string;
-  lens?: string;
+  character?: string;
   notes?: string;
 }
 
@@ -42,7 +42,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     shotSize: s.shotSize || null,
     angle: s.angle || null,
     movement: s.movement || null,
-    lens: s.lens || null,
+    castNotes: s.character || null,
     notes: s.notes || null,
     status: "planned",
     sortOrder: order++,
