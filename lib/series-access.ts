@@ -78,6 +78,7 @@ export async function fanOutMemberToProjects(
       email: member.email,
       displayName: member.displayName,
       kind: member.kind === "cast" ? "cast" : "crew",
+      position: member.position,
       status: member.status,
     });
   }

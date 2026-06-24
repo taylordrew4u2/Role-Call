@@ -53,7 +53,7 @@ export function SeriesWorkspace({
   const [inviteOpen, setInviteOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [kind, setKind] = useState<"crew" | "cast">("crew");
+  const [position, setPosition] = useState<"writer" | "director">("director");
   const [inviteUrl, setInviteUrl] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState("");
@@ -72,7 +72,7 @@ export function SeriesWorkspace({
       const res = await fetch(`/api/series/${seriesId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: name, email: email || undefined, kind }),
+        body: JSON.stringify({ displayName: name, email: email || undefined, position }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -294,7 +294,7 @@ export function SeriesWorkspace({
                     </div>
                     <div className="ml-2 flex items-center gap-1.5 shrink-0">
                       <Badge variant="secondary" className="text-xs capitalize">
-                        {m.kind}
+                        {m.position ?? m.kind}
                       </Badge>
                       {m.status === "invited" && (
                         <span className="text-[10px] text-amber-600 font-medium">invited</span>
@@ -361,16 +361,22 @@ export function SeriesWorkspace({
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="sm-kind">Role type</Label>
+              <Label htmlFor="sm-position">Invite as</Label>
               <select
-                id="sm-kind"
-                value={kind}
-                onChange={(e) => setKind(e.target.value as "crew" | "cast")}
+                id="sm-position"
+                value={position}
+                onChange={(e) => setPosition(e.target.value as "writer" | "director")}
                 className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
               >
-                <option value="crew">Crew</option>
-                <option value="cast">Cast</option>
+                <option value="director">Director</option>
+                <option value="writer">Writer</option>
               </select>
+              {position === "writer" && (
+                <p className="text-xs text-slate-500">
+                  The writer can approve or decline suggested script edits across
+                  the series once they join.
+                </p>
+              )}
             </div>
             {inviteError && (
               <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{inviteError}</p>
