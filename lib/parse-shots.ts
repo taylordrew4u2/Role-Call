@@ -4,14 +4,14 @@ export interface ParsedShot {
   shotSize?: string;
   angle?: string;
   movement?: string;
-  lens?: string;
+  character?: string;
 }
 
 /**
  * Parse free-text into shots, one per non-empty line.
  *
  * If a line uses "|" (or tabs) it's split into columns in this order:
- *   number | size | angle | movement | lens | description
+ *   number | size | angle | movement | character | description
  * Otherwise the whole line becomes the description and the shot is auto-numbered.
  */
 export function parseShotLines(text: string): ParsedShot[] {
@@ -25,13 +25,13 @@ export function parseShotLines(text: string): ParsedShot[] {
 
     if (delimiter) {
       const parts = line.split(delimiter).map((p) => p.trim());
-      const [shotNumber, shotSize, angle, movement, lens, ...descRest] = parts;
+      const [shotNumber, shotSize, angle, movement, character, ...descRest] = parts;
       return {
         shotNumber: shotNumber || String(i + 1),
         shotSize: shotSize || undefined,
         angle: angle || undefined,
         movement: movement || undefined,
-        lens: lens || undefined,
+        character: character || undefined,
         description: descRest.join(" ").trim(),
       };
     }
