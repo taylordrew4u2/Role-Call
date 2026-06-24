@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Drama, UserPlus, Plus, Trash2, Mail, Link as LinkIcon, Pencil } from "lucide-react";
+import { Drama, UserPlus, Plus, Trash2, Mail, Link as LinkIcon, Pencil, Sparkles, Loader2 } from "lucide-react";
 import type { ProjectMember } from "@/lib/db/schema";
 import { toast } from "@/components/Toaster";
 
@@ -31,9 +31,45 @@ export function CastBoard({
     mode: "cast" | "crew";
     member: ProjectMember | null;
   } | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const cast = members.filter((m) => m.kind === "cast");
   const crew = members.filter((m) => m.kind !== "cast");
+
+  async function generateFromScript() {
+    setGenerating(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/cast/from-script`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Couldn't read characters from the script.");
+        return;
+      }
+      const created: ProjectMember[] = data.created ?? [];
+      if (created.length === 0) {
+        toast(
+          data.skipped
+            ? "Every character in the script is already in the cast."
+            : "No new characters found."
+        );
+        return;
+      }
+      setMembers((m) => [...m, ...created]);
+      toast(
+        `Added ${created.length} role${created.length !== 1 ? "s" : ""} from the script.` +
+          (data.skipped ? ` ${data.skipped} already in the cast.` : "") +
+          " Add who's playing each one."
+      );
+    } catch {
+      toast("Network error. Please try again.");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function saveMember(
     data: { displayName: string; character?: string; email?: string; kind: "cast" | "crew" },
@@ -86,27 +122,51 @@ export function CastBoard({
   }
 
   function MemberRow({ member }: { member: ProjectMember }) {
+    // A cast role generated from the script has its character set but no actor
+    // assigned yet (blank displayName).
+    const unassigned = member.kind === "cast" && !member.displayName.trim();
     return (
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-900 truncate">
-            {member.displayName}
-            {member.character && (
-              <span className="text-slate-400 font-normal">
-                {" "}
-                as {member.character}
-              </span>
-            )}
-          </p>
+          {unassigned ? (
+            <p className="text-sm font-medium text-slate-900 truncate">
+              {member.character || "Unnamed role"}
+              <span className="text-slate-400 font-normal"> — not cast yet</span>
+            </p>
+          ) : (
+            <p className="text-sm font-medium text-slate-900 truncate">
+              {member.displayName}
+              {member.character && (
+                <span className="text-slate-400 font-normal">
+                  {" "}
+                  as {member.character}
+                </span>
+              )}
+            </p>
+          )}
           <p className="text-xs text-slate-400 truncate">
             {member.email || "No email"}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge variant={member.status === "active" ? "success" : "secondary"}>
-            {member.status === "active" ? "Joined" : "Invited"}
-          </Badge>
-          {isOwner && (
+          {unassigned ? (
+            isOwner ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setDialog({ mode: "cast", member })}
+              >
+                <UserPlus className="h-3.5 w-3.5 mr-1" /> Add actor
+              </Button>
+            ) : (
+              <Badge variant="secondary">Needs casting</Badge>
+            )
+          ) : (
+            <Badge variant={member.status === "active" ? "success" : "secondary"}>
+              {member.status === "active" ? "Joined" : "Invited"}
+            </Badge>
+          )}
+          {isOwner && !unassigned && (
             <Button
               size="sm"
               variant="ghost"
@@ -116,7 +176,7 @@ export function CastBoard({
               <LinkIcon className="h-3.5 w-3.5" />
             </Button>
           )}
-          {isOwner && (
+          {isOwner && !unassigned && (
             <Button
               size="sm"
               variant="ghost"
@@ -150,15 +210,34 @@ export function CastBoard({
             </h2>
           </div>
           {isOwner && (
-            <Button size="sm" onClick={() => setDialog({ mode: "cast", member: null })}>
-              <Plus className="h-4 w-4 mr-1" /> Add Actor
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={generateFromScript}
+                disabled={generating}
+                title="Detect characters from the script and add them as roles"
+              >
+                {generating ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-1" />
+                )}
+                Generate from script
+              </Button>
+              <Button size="sm" onClick={() => setDialog({ mode: "cast", member: null })}>
+                <Plus className="h-4 w-4 mr-1" /> Add Actor
+              </Button>
+            </div>
           )}
         </div>
         <div className="rounded-lg border border-slate-200 bg-white">
           {cast.length === 0 ? (
             <p className="px-4 py-6 text-sm text-slate-400">
-              No actors yet. {isOwner ? "Add your cast and the characters they play." : ""}
+              No actors yet.{" "}
+              {isOwner
+                ? "Add cast manually, or use “Generate from script” to pull every character from your screenplay."
+                : ""}
             </p>
           ) : (
             cast.map((m) => <MemberRow key={m.id} member={m} />)
@@ -231,6 +310,8 @@ function PersonDialog({
 
   const isCast = mode === "cast";
   const isEdit = member !== null;
+  // Editing a script-generated role that has no actor yet.
+  const casting = isCast && member !== null && !member.displayName.trim();
 
   async function submit() {
     if (!displayName.trim()) {
@@ -258,12 +339,20 @@ function PersonDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isCast ? <Drama className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-            {isEdit ? "Edit" : isCast ? "Add Actor" : "Invite Person"}
+            {casting
+              ? `Cast ${member?.character || "this role"}`
+              : isEdit
+                ? "Edit"
+                : isCast
+                  ? "Add Actor"
+                  : "Invite Person"}
           </DialogTitle>
           <DialogDescription>
-            {isCast
-              ? "Cast member details. Email is optional — add it to send a join invite."
-              : "Project collaborator. They'll get an email join link if email is set up."}
+            {casting
+              ? "Add who's playing this role. Email is optional — add it to send a join invite."
+              : isCast
+                ? "Cast member details. Email is optional — add it to send a join invite."
+                : "Project collaborator. They'll get an email join link if email is set up."}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -303,7 +392,15 @@ function PersonDialog({
             Cancel
           </Button>
           <Button onClick={submit} disabled={saving || !displayName.trim()}>
-            {saving ? "Saving…" : isEdit ? "Save" : isCast ? "Add Actor" : "Send Invite"}
+            {saving
+              ? "Saving…"
+              : casting
+                ? "Cast role"
+                : isEdit
+                  ? "Save"
+                  : isCast
+                    ? "Add Actor"
+                    : "Send Invite"}
           </Button>
         </DialogFooter>
       </DialogContent>
