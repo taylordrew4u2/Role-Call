@@ -6,6 +6,7 @@ import { desc, eq } from "drizzle-orm";
 import { ScriptWorkspace } from "@/components/ScriptWorkspace";
 import { writerIdOf } from "@/lib/script-access";
 import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
+import { isProjectManager } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -38,7 +39,8 @@ export default async function ScriptPage({ params }: { params: Params }) {
     .from(projectMembers)
     .where(eq(projectMembers.projectId, id));
 
-  const isOwner = project.ownerId === userId;
+  // Directors manage the script (appoint writer, etc.) like the owner.
+  const canManage = await isProjectManager(project, userId);
   const writerId = writerIdOf(project);
   const isWriter = writerId === userId;
 
@@ -51,7 +53,7 @@ export default async function ScriptPage({ params }: { params: Params }) {
     <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6">
       <ScriptWorkspace
         projectId={id}
-        isOwner={isOwner}
+        isOwner={canManage}
         isWriter={isWriter}
         ownerId={project.ownerId}
         writerId={writerId}

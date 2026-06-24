@@ -131,7 +131,7 @@ export function ScriptWorkspace({
               disabled={savingWriter}
               className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
             >
-              <option value={ownerId}>You (owner)</option>
+              <option value={ownerId}>Owner (default)</option>
               {eligibleWriters
                 .filter((w) => w.clerkUserId !== ownerId)
                 .map((w) => (

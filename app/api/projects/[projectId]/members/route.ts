@@ -1,9 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { projects, projectMembers } from "@/lib/db/schema";
+import { projectMembers } from "@/lib/db/schema";
 import { getAppUrl } from "@/lib/get-app-url";
 import { eq, and } from "drizzle-orm";
 import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
+import { requireProjectManager } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -31,21 +32,10 @@ export async function POST(
   request: Request,
   { params }: { params: Params }
 ) {
-  const { userId } = await auth();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
   const { projectId } = await params;
-  const id = parseInt(projectId, 10);
-  if (isNaN(id)) return Response.json({ error: "Invalid ID" }, { status: 400 });
-
-  // Verify requester is the project owner
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, id));
-  if (!project) return Response.json({ error: "Not found" }, { status: 404 });
-  if (project.ownerId !== userId)
-    return Response.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requireProjectManager(projectId);
+  if (!access.ok) return access.response;
+  const { id, project } = access;
 
   const { email, displayName, kind, character, position } = await request.json();
   if (!displayName?.trim()) {
@@ -143,12 +133,10 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
   const { projectId } = await params;
-  const id = parseInt(projectId, 10);
-  if (isNaN(id)) return Response.json({ error: "Invalid ID" }, { status: 400 });
+  const access = await requireProjectManager(projectId);
+  if (!access.ok) return access.response;
+  const { id } = access;
 
   // Parse memberId from URL — DELETE /api/projects/[projectId]/members?memberId=123
   const url = new URL(_request.url);
@@ -156,15 +144,6 @@ export async function DELETE(
   const memberId = memberIdStr ? parseInt(memberIdStr, 10) : NaN;
   if (isNaN(memberId))
     return Response.json({ error: "Invalid member ID" }, { status: 400 });
-
-  // Verify requester is the project owner
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, id));
-  if (!project) return Response.json({ error: "Not found" }, { status: 404 });
-  if (project.ownerId !== userId)
-    return Response.json({ error: "Forbidden" }, { status: 403 });
 
   // Delete the member
   await db

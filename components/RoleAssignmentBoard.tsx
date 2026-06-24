@@ -67,6 +67,8 @@ interface RoleAssignmentBoardProps {
   projectId: number;
   ownerId: string;
   currentUserId: string;
+  /** Owner or a director — can manage the project. */
+  canManage?: boolean;
   roles: Role[];
   members: Member[];
   assignments: Assignment[];
@@ -80,13 +82,14 @@ export function RoleAssignmentBoard({
   projectId,
   ownerId,
   currentUserId,
+  canManage,
   roles,
   members: initialMembers,
   assignments: initialAssignments,
   recommendedRoleNames,
   productionTypeLabel,
 }: RoleAssignmentBoardProps) {
-  const isOwner = currentUserId === ownerId;
+  const isOwner = canManage ?? currentUserId === ownerId;
 
   const [assignments, setAssignments] =
     useState<Assignment[]>(initialAssignments);

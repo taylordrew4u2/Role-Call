@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { projects, assignments } from "@/lib/db/schema";
+import { assignments } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { requireProjectManager } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -29,21 +30,10 @@ export async function POST(
   request: Request,
   { params }: { params: Params }
 ) {
-  const { userId } = await auth();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
   const { projectId } = await params;
-  const id = parseInt(projectId, 10);
-  if (isNaN(id)) return Response.json({ error: "Invalid ID" }, { status: 400 });
-
-  // Only the project owner can assign
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, id));
-  if (!project) return Response.json({ error: "Not found" }, { status: 404 });
-  if (project.ownerId !== userId)
-    return Response.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requireProjectManager(projectId);
+  if (!access.ok) return access.response;
+  const { id } = access;
 
   const { roleId, assignedMemberId, backupMemberId, notes } =
     await request.json();

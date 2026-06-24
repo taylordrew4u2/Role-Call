@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { projects, projectMembers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { CastBoard } from "@/components/CastBoard";
+import { isProjectManager } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -18,6 +19,8 @@ export default async function CastPage({ params }: { params: Params }) {
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) redirect("/dashboard");
 
+  const canManage = await isProjectManager(project, userId);
+
   const members = await db
     .select()
     .from(projectMembers)
@@ -27,7 +30,7 @@ export default async function CastPage({ params }: { params: Params }) {
     <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6">
       <CastBoard
         projectId={id}
-        isOwner={project.ownerId === userId}
+        isOwner={canManage}
         initialMembers={members}
       />
     </main>
