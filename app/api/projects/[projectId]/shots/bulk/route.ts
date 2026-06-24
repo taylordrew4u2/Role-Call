@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { shots } from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { requireProjectOwner } from "@/lib/project-access";
+import { requireProjectDirector } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -18,7 +18,7 @@ interface IncomingShot {
 // POST /api/projects/[projectId]/shots/bulk — create many shots at once
 export async function POST(request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
   const body = await request.json();
@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
 // every shot in the project.
 export async function DELETE(request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
   const body = await request.json().catch(() => ({}));

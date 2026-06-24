@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { scripts, scenes, shots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { requireProjectOwner } from "@/lib/project-access";
+import { requireProjectDirector } from "@/lib/project-access";
 import { parseScenesFromScript } from "@/lib/parse-scenes";
 import { buildShotsForScene, type ShotMode } from "@/lib/script-to-shots";
 
@@ -14,7 +14,7 @@ type Params = Promise<{ projectId: string }>;
 // refusing on imperfectly formatted text.
 export async function POST(request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
-  const access = await requireProjectOwner(projectId);
+  const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
   const body = await request.json().catch(() => ({}));

@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { projects } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { projects, projectMembers } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
 import type { Project } from "@/lib/db/schema";
 import { ensureAllSchema } from "@/lib/db/ensure-all-schema";
 
@@ -37,4 +37,34 @@ export async function requireProjectOwner(projectIdStr: string): Promise<Ok | Er
     return { ok: false, response: Response.json({ error: "Forbidden" }, { status: 403 }) };
   }
   return access;
+}
+
+/**
+ * Like getProjectAccess but requires the caller to be the owner OR a joined
+ * member invited as a director. Used for the shot list (shots, scenes, shoot
+ * days), which directors are allowed to build and edit.
+ */
+export async function requireProjectDirector(projectIdStr: string): Promise<Ok | Err> {
+  const access = await getProjectAccess(projectIdStr);
+  if (!access.ok) return access;
+  if (access.project.ownerId === access.userId) return access;
+
+  const [member] = await db
+    .select()
+    .from(projectMembers)
+    .where(
+      and(
+        eq(projectMembers.projectId, access.id),
+        eq(projectMembers.clerkUserId, access.userId)
+      )
+    );
+  if (member?.position === "director") return access;
+
+  return {
+    ok: false,
+    response: Response.json(
+      { error: "Only the owner or a director can do that." },
+      { status: 403 }
+    ),
+  };
 }
