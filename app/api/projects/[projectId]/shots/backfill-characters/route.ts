@@ -3,12 +3,9 @@ import { shots, scripts, projectMembers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { requireProjectManager } from "@/lib/project-access";
 import { parseCharactersFromScript } from "@/lib/parse-characters";
+import { namesInText } from "@/lib/match-names";
 
 type Params = Promise<{ projectId: string }>;
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 // POST /api/projects/[projectId]/shots/backfill-characters
 // Fills the Character field on existing shots that don't have one yet, by
@@ -44,10 +41,7 @@ export async function POST(_request: Request, { params }: { params: Params }) {
   if (candidates.length > 0) {
     for (const shot of allShots) {
       if ((shot.castNotes ?? "").trim()) continue; // don't overwrite existing
-      const desc = shot.description ?? "";
-      const found = candidates.filter((name) =>
-        new RegExp(`\\b${escapeRegExp(name)}\\b`, "i").test(desc)
-      );
+      const found = namesInText(shot.description ?? "", candidates);
       if (found.length) {
         await db.update(shots).set({ castNotes: found.join(", ") }).where(eq(shots.id, shot.id));
         updated += 1;

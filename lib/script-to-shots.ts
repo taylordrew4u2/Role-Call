@@ -1,5 +1,6 @@
 import type { ParsedScene } from "./parse-scenes";
 import { suggestShotFields } from "./suggest-shot";
+import { namesInText } from "./match-names";
 
 export interface GeneratedShot {
   shotNumber: string;
@@ -180,10 +181,6 @@ function sceneCharacters(scene: ParsedScene): string[] {
   return order;
 }
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 /**
  * Which of the scene's characters are named in a piece of text. Falls back to
  * everyone in the scene when none are explicitly mentioned, so every shot still
@@ -191,7 +188,7 @@ function escapeRegExp(s: string): string {
  */
 function castFor(text: string, chars: string[]): string {
   if (chars.length === 0) return "";
-  const named = chars.filter((c) => new RegExp(`\\b${escapeRegExp(c)}\\b`, "i").test(text));
+  const named = namesInText(text, chars);
   return (named.length ? named : chars).join(", ");
 }
 
@@ -260,18 +257,4 @@ export function buildShotsForScene(
   }
 
   return shots;
-}
-
-/** Infer a full shot list across every parsed scene, grouped by scene index. */
-export function buildShotsForScenes(
-  scenes: ParsedScene[],
-  opts: { maxShotsPerScene?: number; mode?: ShotMode; singleCamera?: boolean } = {}
-): GeneratedShot[][] {
-  return scenes.map((s) =>
-    buildShotsForScene(s, {
-      maxShots: opts.maxShotsPerScene,
-      mode: opts.mode,
-      singleCamera: opts.singleCamera,
-    })
-  );
 }
