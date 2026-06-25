@@ -211,24 +211,15 @@ export const shots = pgTable("shots", {
   notes: text("notes"),
 });
 
-// TypeScript types derived from schema
+// TypeScript types derived from schema (row/select shapes used across the app).
 export type Project = typeof projects.$inferSelect;
-export type NewProject = typeof projects.$inferInsert;
 export type Series = typeof series.$inferSelect;
-export type NewSeries = typeof series.$inferInsert;
 export type SeriesMember = typeof seriesMembers.$inferSelect;
-export type NewSeriesMember = typeof seriesMembers.$inferInsert;
 export type ProjectMember = typeof projectMembers.$inferSelect;
-export type NewProjectMember = typeof projectMembers.$inferInsert;
 export type Role = typeof roles.$inferSelect;
 export type Assignment = typeof assignments.$inferSelect;
-export type NewAssignment = typeof assignments.$inferInsert;
 export type Script = typeof scripts.$inferSelect;
 export type ScriptSuggestion = typeof scriptSuggestions.$inferSelect;
-export type NewScriptSuggestion = typeof scriptSuggestions.$inferInsert;
 export type Scene = typeof scenes.$inferSelect;
-export type NewScene = typeof scenes.$inferInsert;
 export type ShootDay = typeof shootDays.$inferSelect;
-export type NewShootDay = typeof shootDays.$inferInsert;
 export type Shot = typeof shots.$inferSelect;
-export type NewShot = typeof shots.$inferInsert;
