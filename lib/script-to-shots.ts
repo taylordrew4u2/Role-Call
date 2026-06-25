@@ -103,24 +103,23 @@ function dialogueCoverage(
   }
   if (!order.length) return [];
 
-  const quote = (c: string) => {
-    const line = rep.get(c);
-    return line ? ` — “${snippet(line)}”` : "";
-  };
+  // Description is the line that's spoken — the camera framing lives in the
+  // Size/Angle columns, not the description.
+  const line = (c: string) => snippet(rep.get(c) ?? "", 140) || `${c} — dialogue`;
   const out: Omit<GeneratedShot, "shotNumber">[] = [];
 
-  // Single speaker (monologue, phone call, to-camera): MS then CU.
+  // Single speaker (monologue, phone call, to-camera): MS then CU of their line.
   if (order.length === 1) {
     const c = order[0];
     out.push({
-      description: `${c} — dialogue${quote(c)}`,
+      description: line(c),
       shotSize: "MS",
       angle: "Eye-level",
       movement: "Static",
       castNotes: c,
     });
     out.push({
-      description: `CU — ${c}`,
+      description: line(c),
       shotSize: "CU",
       angle: "Eye-level",
       movement: "Static",
@@ -134,7 +133,7 @@ function dialogueCoverage(
   // skip the group shot entirely.
   if (!opts.singleCamera) {
     out.push({
-      description: `Dialogue master — ${order.join(" / ")}`,
+      description: snippet(beats[0].text ?? "", 140) || order.join(" / "),
       shotSize: order.length === 2 ? "MWS" : "WS",
       angle: "Eye-level",
       movement: "Static",
@@ -145,7 +144,7 @@ function dialogueCoverage(
   // Per speaker: an OTS single, plus a CU for principals (more than one line).
   for (const c of order) {
     out.push({
-      description: `OTS favoring ${c}${quote(c)}`,
+      description: line(c),
       shotSize: "OTS",
       angle: "Eye-level",
       movement: "Static",
@@ -153,7 +152,7 @@ function dialogueCoverage(
     });
     if ((count.get(c) ?? 0) >= 2) {
       out.push({
-        description: `CU — ${c}`,
+        description: line(c),
         shotSize: "CU",
         angle: "Eye-level",
         movement: "Static",
@@ -220,11 +219,13 @@ export function buildShotsForScene(
   const firstOf = (s: string) => s.split(",")[0]?.trim() ?? "";
   const allCast = single ? chars[0] ?? "" : chars.join(", ");
 
-  // 1) Establishing shot of the location.
+  // 1) Establishing shot of the location. Description is the setting/action;
+  // the wide size conveys that it's an establishing shot.
   const place = scene.location || scene.heading;
+  const estDescription = scene.synopsis?.trim() || place;
   shots.push({
     shotNumber: numFor(),
-    description: `Establishing — ${place}`.slice(0, 200),
+    description: estDescription.slice(0, 200),
     shotSize: establishingSize(scene.intExt),
     angle: scene.intExt === "EXT" ? "High" : "Eye-level",
     movement: "Static",
