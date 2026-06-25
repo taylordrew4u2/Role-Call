@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+  <rect width="1000" height="620" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>
+  <!-- window bar -->
+  <rect width="1000" height="44" rx="14" fill="#0f172a"/>
+  <rect y="22" width="1000" height="22" fill="#0f172a"/>
+  <circle cx="24" cy="22" r="6" fill="#ef4444"/><circle cx="44" cy="22" r="6" fill="#f59e0b"/><circle cx="64" cy="22" r="6" fill="#22c55e"/>
+  <rect x="300" y="12" width="400" height="20" rx="10" fill="#1e293b"/>
+  <text x="500" y="27" fill="#64748b" font-size="12" text-anchor="middle">rolecall.app/dashboard</text>
+  <!-- app header -->
+  <text x="32" y="84" fill="#0f172a" font-size="20" font-weight="800">🎬 Role<tspan fill="#E11D2A">Call</tspan></text>
+  <g transform="translate(740,66)">
+    <rect width="120" height="30" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="20" y="20" fill="#334155" font-size="13" font-weight="600">+ New Series</text>
+    <rect x="130" y="0" width="118" height="30" rx="8" fill="#0f172a"/>
+    <text x="150" y="20" fill="#fff" font-size="13" font-weight="600">+ New Project</text>
+  </g>
+  <text x="32" y="128" fill="#0f172a" font-size="22" font-weight="800">Welcome back, Director 🎬</text>
+  <text x="32" y="150" fill="#64748b" font-size="13">You have 4 projects across 1 series.</text>
+  <!-- series row -->
+  <text x="32" y="186" fill="#475569" font-size="12" font-weight="700" letter-spacing="1">▦ SERIES</text>
+  <g transform="translate(32,198)">
+    <rect width="300" height="86" rx="12" fill="#fff" stroke="#fecdd3"/>
+    <rect width="5" height="86" rx="3" fill="#E11D2A"/>
+    <rect x="20" y="16" width="70" height="20" rx="10" fill="#fef2f2"/>
+    <text x="32" y="30" fill="#E11D2A" font-size="11" font-weight="700">▦ Series</text>
+    <text x="20" y="58" fill="#0f172a" font-size="15" font-weight="700">Night Shift (Anthology)</text>
+    <text x="20" y="76" fill="#94a3b8" font-size="12">3 projects · shared team</text>
+  </g>
+  <!-- standalone projects -->
+  <text x="32" y="316" fill="#475569" font-size="12" font-weight="700" letter-spacing="1">🎞 PROJECTS</text>
+  <g font-size="12">
+    <g transform="translate(32,330)">
+      <rect width="220" height="120" rx="12" fill="#fff" stroke="#e2e8f0"/>
+      <rect x="16" y="16" width="92" height="20" rx="10" fill="#f1f5f9"/><text x="26" y="30" fill="#475569">🎬 Short film</text>
+      <text x="16" y="62" fill="#0f172a" font-size="15" font-weight="700">The Last Frame</text>
+      <text x="16" y="84" fill="#94a3b8">📅 Sat, Jun 28</text>
+      <text x="16" y="104" fill="#64748b">A burned-out editor's last cut.</text>
+    </g>
+    <g transform="translate(264,330)">
+      <rect width="220" height="120" rx="12" fill="#fff" stroke="#e2e8f0"/>
+      <rect x="16" y="16" width="88" height="20" rx="10" fill="#f1f5f9"/><text x="26" y="30" fill="#475569">🎵 Music video</text>
+      <text x="16" y="62" fill="#0f172a" font-size="15" font-weight="700">Neon Hours</text>
+      <text x="16" y="84" fill="#94a3b8">📅 Sun, Jun 29</text>
+      <text x="16" y="104" fill="#64748b">One-take rooftop performance.</text>
+    </g>
+    <g transform="translate(496,330)">
+      <rect width="220" height="120" rx="12" fill="#fff" stroke="#e2e8f0"/>
+      <rect x="16" y="16" width="74" height="20" rx="10" fill="#f1f5f9"/><text x="26" y="30" fill="#475569">📱 Reels</text>
+      <text x="16" y="62" fill="#0f172a" font-size="15" font-weight="700">Coffee Shop Bit</text>
+      <text x="16" y="84" fill="#94a3b8">📅 Today</text>
+      <text x="16" y="104" fill="#64748b">Two-hander comedy sketch.</text>
+    </g>
+    <g transform="translate(728,330)">
+      <rect width="220" height="120" rx="12" fill="#fff" stroke="#e2e8f0" stroke-dasharray="6 5"/>
+      <text x="110" y="66" fill="#cbd5e1" font-size="32" text-anchor="middle">+</text>
+      <text x="110" y="92" fill="#94a3b8" text-anchor="middle">New project</text>
+    </g>
+  </g>
+  <text x="32" y="496" fill="#475569" font-size="12" font-weight="700" letter-spacing="1">TABS</text>
+  <g transform="translate(32,506)" font-size="12" font-weight="600" fill="#334155">
+    <rect width="80" height="30" rx="8" fill="#0f172a"/><text x="20" y="20" fill="#fff">Roles</text>
+    <rect x="90" width="70" height="30" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="108" y="20">Cast</text>
+    <rect x="170" width="80" height="30" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="188" y="20">Script</text>
+    <rect x="260" width="100" height="30" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="276" y="20">Shot List</text>
+    <rect x="370" width="100" height="30" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="386" y="20">Schedule</text>
+    <rect x="480" width="80" height="30" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="498" y="20">Checks</text>
+  </g>
+  <text x="32" y="576" fill="#94a3b8" font-size="11">Onboarding wizard · critical-role warnings · lean 8-person template · everything per-project</text>
+</svg>
