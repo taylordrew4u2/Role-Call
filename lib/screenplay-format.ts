@@ -15,7 +15,7 @@ const PARENTHETICAL_INDENT = " ".repeat(15);
 const DIALOGUE_INDENT = " ".repeat(10);
 
 /** Transform a single line into the chosen screenplay element. */
-export function formatLine(line: string, element: ScreenplayElement): string {
+function formatLine(line: string, element: ScreenplayElement): string {
   const bare = line.trim();
   switch (element) {
     case "scene":
