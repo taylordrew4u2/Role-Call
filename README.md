@@ -1,220 +1,170 @@
 <div align="center">
 
+<img src="docs/screenshots/hero.svg" alt="RoleCall — Action starts with everyone knowing their role" width="100%"/>
+
 # 🎬 RoleCall
 
-### _Action starts with everyone knowing their role._
+**The all-in-one production hub for filmmakers.** Plan a shoot end to end —
+crew, cast, script, shot list, and schedule — and let RoleCall turn your
+**screenplay into a cast list and a camera-ready shot list automatically**, so
+when you call _"Action!"_ nothing falls through the cracks.
 
-**RoleCall** is the all-in-one production hub for filmmakers — from TikTok &
-Reels creators to short-film and feature directors. Plan a shoot end to end:
-the crew, the cast, the script, the shot list, and the schedule — so when you
-call **"Action!"**, nothing falls through the cracks.
-
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Clerk](https://img.shields.io/badge/Auth-Clerk-6C47FF?logo=clerk&logoColor=white)](https://clerk.com/)
-[![Drizzle](https://img.shields.io/badge/ORM-Drizzle-C5F74F?logo=drizzle&logoColor=black)](https://orm.drizzle.team/)
-[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com/)
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-E11D2A?style=for-the-badge)](https://role-call-taylordrew4u2s-projects.vercel.app)
+&nbsp;
+[![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind](https://img.shields.io/badge/Tailwind_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
 
 </div>
 
 ---
 
-## ✦ The brand
+## 📸 Demo
 
-**RoleCall** is a triple play on words — and the whole product lives inside it:
+> **[▶ Open the live app](https://role-call-taylordrew4u2s-projects.vercel.app)** — sign in and create a project in under a minute.
 
-- **Roll call** — _who's here?_ Cast and crew, invited and accounted for.
-- **Role call** — _who does what?_ Every responsibility assigned, nothing assumed.
-- **Call sheet** — _where and when?_ Scenes, shots, and shoot days, organized.
+|  |  |
+|---|---|
+| **Dashboard** — projects & series at a glance | **Script → suggest → approve → publish** |
+| <img src="docs/screenshots/dashboard.svg" alt="RoleCall dashboard" width="100%"/> | <img src="docs/screenshots/script.svg" alt="Script workspace with suggest-and-approve" width="100%"/> |
 
-> **Voice:** confident, on-set, and friendly. We speak like a great 1st AD —
-> calm, prepared, and three steps ahead. Red `#E11D2A` for the record light,
-> slate for the clipboard. The clapperboard 🎬 is our mark.
+**Shot list, generated from your script and organized by cast**
 
-**Who it's for:** the solo creator shooting on an iPhone, the film-school crew
-running two cameras, and everyone in between. RoleCall scales its coverage to
-how _you_ actually shoot.
+<img src="docs/screenshots/shotlist.svg" alt="Shot list organized by cast" width="100%"/>
 
----
-
-## ✦ What it does
-
-### 🎟️ Team — invited and accounted for
-- **Name-only invites with a copyable link.** Email is optional; everyone you
-  add gets a share link that works with or without an email provider.
-- **Invite as Writer or Director.** Roles aren't just labels — a **Writer**
-  is auto-appointed to approve script edits; a **Director** gets full
-  production powers (see below).
-- **Add & remove** cast and crew at any time, re-invite freely.
-
-### 🎭 Roles & crew
-- **Onboarding wizard** recommends the crew you typically need for what you're
-  making (sketch, music video, commercial, short, or feature).
-- **Role Assignment Board** — assign, reassign, and back up every
-  responsibility, with a duties viewer and **critical-role warnings**.
-- **Lean 8-person template** — one-click crew distribution for small shoots.
-- Per-project roles: add/edit/remove without touching your other projects.
-
-### ✍️ Script — write, suggest, approve, publish
-- A two-tab **Script workspace**: an **Editing draft** and the **Final Script**.
-- A real **screenwriting toolbar** — scene headings, action, character,
-  parenthetical, dialogue, transitions, and a one-click new-scene template.
-- **Suggest-and-approve workflow:** anyone on the project can highlight text and
-  **suggest an edit**; the **appointed Writer** approves or declines it.
-- **Publish** locks the approved draft as the Final Script. Autosave throughout;
-  optional file upload (PDF / Fountain / Word).
-
-### 🎬 Cast & shot list — generated from your script
-- **Auto-generate the cast** from the screenplay — every speaking character is
-  detected (handles `(V.O.)`/`(CONT'D)`, `NAME:` and title-case formats, and
-  scripts with no slug lines), then you say **who's playing each role**.
-- **Generate scenes & shots from the script** — action coverage, full **dialogue
-  coverage** (master, OTS singles, CUs), or both. No AI, no API cost — just
-  smart parsing.
-- **"Filming on" awareness:** choose **iPhone / 1 camera** (one person per shot)
-  or **2 cameras** (adds two-shots that hold characters together).
-- **Every shot says who's in it.** Descriptions read like the script (the line
-  or the action); framing lives in the Size/Angle columns; a **Character** field
-  is required on every shot.
-- View **by Scene**, **by Cast** (each character's coverage + a "Characters
-  together" section), as a **Table**, or as **Cards**. Export **CSV**, copy as
-  text, or print a clean shot list.
-
-### 🎞️ Series — one team across many projects
-- Group multiple projects into a **Series**. Anyone invited to the Series
-  automatically joins **every** project in it — roles, cast, script, and invites
-  all work unchanged, via a clean fan-out membership model.
-
-### 🪪 Director parity
-- **Directors can do everything the owner can** on a project — manage the team
-  and roles, appoint the writer, and build the script, shot list, and schedule.
-
-### 🗓️ Schedule & shoot-day ready
-- Create **shoot days** (date, call time, location) and assign shots to days.
-- **Fully responsive** — built to live in your hand on set.
+> _UI previews above. Live, signed-in screens are on the [demo](https://role-call-taylordrew4u2s-projects.vercel.app)._
 
 ---
 
-## ✦ Tech stack
+## 🧰 Tech stack
 
 | Layer | Technology |
 |---|---|
-| Framework | **Next.js 16** (App Router) + **TypeScript** |
-| Styling | **Tailwind CSS v4** + custom shadcn-style components |
-| Auth | **Clerk v7** |
-| Database | **Vercel Postgres (Neon)** + **Drizzle ORM** |
-| File storage | **Vercel Blob** _(optional — script uploads)_ |
-| Email | **Resend** _(optional — invite emails)_ |
-| Deployment | **Vercel** |
-
-**Engineering highlights**
-
-- **Zero-cost script intelligence** — cast extraction and shot-list generation
-  are pure local parsers (`lib/parse-characters`, `lib/parse-scenes`,
-  `lib/script-to-shots`), so there's no LLM bill and no rate limits.
-- **Runtime-idempotent schema** — feature columns/tables are applied with
-  `ADD COLUMN IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS` at request time, so
-  new features ship to existing databases without a manual migration step.
-- **Fan-out membership** — Series members are projected into per-project rows so
-  every existing per-project feature works with no special-casing.
-- **Permission model** — a single `requireProjectManager` gate (owner _or_
-  director) backs every management action across the API.
+| **Framework** | Next.js 16 (App Router) · React Server Components · TypeScript |
+| **Styling** | Tailwind CSS v4 · custom shadcn-style component system |
+| **Auth** | Clerk v7 |
+| **Database** | Vercel Postgres (Neon) · Drizzle ORM |
+| **Storage / Email** | Vercel Blob · Resend _(both optional)_ |
+| **Hosting / CI** | Vercel (preview deploy per PR) |
 
 ---
 
-## ✦ Getting started
+## ✨ Features
 
-### 1. Clone and install
+- **🎭 Cast from script** — auto-detects every speaking character in the
+  screenplay (handles `(V.O.)`/`(CONT'D)`, `NAME:` and title-case formats, and
+  scripts with no slug lines), then you assign who plays each role.
+- **🎥 Shot list from script** — generates scenes and a shot list (action,
+  full **dialogue coverage**, or both) with **zero AI cost** — pure parsing.
+  Descriptions read like the script; framing lives in the Size/Angle columns;
+  **every shot is tagged with its character**.
+- **📱 Camera-aware coverage** — pick **iPhone / 1 camera** (one person per
+  shot) or **2 cameras** (adds two-shots), and the coverage adapts.
+- **✍️ Script workspace** — Editing draft + published **Final Script**, a real
+  screenwriting toolbar, and a **suggest-and-approve** workflow where an
+  appointed **Writer** accepts or declines edits.
+- **🎟️ Smart invites** — name-only invites with a copyable link (email
+  optional); invite people **as Writer or Director**, where a Director gets
+  **full owner-level powers**.
+- **🎬 Roles & crew** — onboarding wizard, Role Assignment Board with
+  critical-role warnings, and a one-click **lean 8-person template**.
+- **🎞️ Series** — one team across many projects; series members fan out into
+  every project automatically.
+- **🗓️ Schedule + exports** — shoot days with call times; view the shot list by
+  **Scene / Cast / Table / Cards**; export **CSV**, copy as text, or print.
+
+---
+
+## 🚀 Getting started
+
+**Prerequisites:** Node 18+, a Clerk app (free), and a Postgres URL (Neon/Vercel, free).
 
 ```bash
-git clone <repo-url>
+# 1. Clone & install
+git clone https://github.com/taylordrew4u2/Role-Call.git
 cd Role-Call
 npm install
+
+# 2. Configure environment
+cp .env.example .env.local      # then fill in the values below
+
+# 3. Run
+npm run dev                     # http://localhost:3000
 ```
 
-### 2. Configure environment
-
-```bash
-cp .env.example .env.local
-```
+Then open `http://localhost:3000/api/setup` **once** to create the tables and
+seed the production roles (safe to re-run).
 
 | Variable | Required | Purpose |
 |---|---|---|
-| Clerk publishable + secret keys | ✅ | Authentication |
-| `POSTGRES_URL` | ✅ | Vercel/Neon database |
-| `RESEND_API_KEY` | — | Send invite emails |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` · `CLERK_SECRET_KEY` | ✅ | Auth (clerk.com) |
+| `POSTGRES_URL` | ✅ | Database (Neon/Vercel) |
+| `RESEND_API_KEY` | — | Invite emails |
 | `BLOB_READ_WRITE_TOKEN` | — | Script file uploads |
 | `NEXT_PUBLIC_APP_URL` | — | Site URL (falls back to `VERCEL_URL`) |
 
-### 3. Create tables & seed roles
-
-Start the dev server and open `http://localhost:3000/api/setup` once — it
-creates every table (if missing) and seeds the production roles. Safe to run
-repeatedly. (`npm run db:push` also pushes the schema.)
-
-### 4. Run it
-
-```bash
-npm run dev
-```
-
-Open **[http://localhost:3000](http://localhost:3000)** and call action.
+**Deploy to Vercel:** import the repo, add the **Neon** and **Clerk**
+marketplace integrations (both free, keys auto-injected), redeploy, then hit
+`/api/setup` once. _No third-party billing required._
 
 ---
 
-## ✦ Deploy to Vercel (free integrations only)
+## 🎯 Usage
 
-No third-party billing or manual key copying — everything uses Vercel
-Marketplace integrations on their free plans.
-
-1. Push to GitHub and import at **[vercel.com/new](https://vercel.com/new)**.
-2. **Database (free):** Storage → Create Database → **Neon** → Free → connect
-   (auto-adds `POSTGRES_URL`).
-3. **Login (free):** Integrations → Marketplace → **Clerk** → Free plan
-   (auto-adds the Clerk keys).
-4. **(Optional) Script uploads:** Storage → Create → **Blob**.
-5. **Redeploy**, then open `https://your-app.vercel.app/api/setup` once to
-   create tables + seed roles.
-
-> Invite emails (Resend) are optional — invited people are always added, and you
-> can share their copyable invite link by hand.
+1. **Create a project** — the wizard suggests the crew for what you're making.
+2. **Add the script** — type/paste it in the Script tab (autosaves).
+3. **Generate the cast** — one click pulls every character out of the script.
+4. **Generate the shot list** — choose your camera setup and coverage; RoleCall
+   builds scenes + shots, each tagged with who's in it.
+5. **Invite the team** — share copyable links; assign roles; set shoot days.
+6. **On set** — open it on your phone, work the **By Cast** view, export/print.
 
 ---
 
-## ✦ Data model
+## 🧠 Challenges & what I built
 
-```
-series               — id, owner_id, title, description, created_at
-series_members       — id, series_id, clerk_user_id, email, display_name, kind, position, status
-projects             — id, owner_id, title, project_type, shoot_date, description,
-                       script_writer_id, camera_setup (single|dual), series_id, created_at
-project_members      — id, project_id, series_member_id, clerk_user_id, email,
-                       display_name, kind (cast|crew), position (writer|director), character, status
-roles                — id, project_id (null = shared template), name, category, duties (jsonb), is_critical, sort_order
-project_hidden_roles — id, project_id, role_id
-assignments          — id, project_id, role_id, assigned_member_id, backup_member_id, notes
-scripts              — id, project_id, content, final_content, file_url, file_name, updated_at
-script_suggestions   — id, project_id, author_id, author_name, anchor_text, suggested_text,
-                       comment, status, resolved_by, created_at, resolved_at
-scenes               — id, project_id, scene_number, heading, int_ext, location, time_of_day, synopsis, sort_order
-shoot_days           — id, project_id, day_number, shoot_date, location, call_time, notes, sort_order
-shots                — id, project_id, scene_id, shoot_day_id, shot_number, description,
-                       shot_size, angle, movement, lens, equipment, cast_notes, status, sort_order, notes
-```
+I designed and built **RoleCall end to end** — data model, API, and UI. A few
+problems worth calling out:
 
-## ✦ Scripts
+- **Turning a screenplay into a production plan, for free.** Rather than reach
+  for an LLM, I wrote resilient parsers (`lib/parse-characters`,
+  `lib/parse-scenes`, `lib/script-to-shots`) that handle messy real-world
+  formats — `(V.O.)` tags, `NAME:`/title-case cues, transitions, and Zoom-style
+  scripts with no slug lines — and turn them into cast lists and proper coverage
+  (master → OTS → CU). No API keys, no rate limits, no per-use cost.
+- **Coverage that matches how you actually shoot.** A "Filming on" setting
+  drives whether dialogue is covered one-person-per-shot (one camera) or with
+  two-shots (two cameras), and the shot list reorganizes by character with a
+  dedicated "Characters together" section.
+- **Shipping schema changes to a live DB with no downtime.** Instead of a
+  brittle migration step, new columns/tables are applied **idempotently at
+  runtime** (`ADD COLUMN IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS`), so
+  features roll out to existing data instantly — plus a backfill tool to apply
+  new fields to old records.
+- **A clean permission model.** A single `requireProjectManager` gate (owner
+  _or_ director) backs every management endpoint, and **Series** membership uses
+  a fan-out pattern so every per-project feature works unchanged.
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start the development server |
-| `npm run build` | Build for production |
-| `npm run db:push` | Push Drizzle schema to Postgres |
-| `npm run db:studio` | Open Drizzle Studio |
-| `npm run db:generate` | Generate Drizzle migrations |
-| `npm run lint` | Run ESLint |
+**Result:** a solo filmmaker can paste a script and walk away with a cast list
+and a shootable, cast-tagged shot list in seconds.
 
 ---
+
+## 📂 Project structure
+
+```
+app/            Next.js routes (dashboard, project tabs, API)
+components/     UI — ShotListBoard, ScriptWorkspace, RoleAssignmentBoard, …
+lib/            parsers (script→cast, script→shots), access guards, db schema
+docs/           screenshots & brand assets
+```
+
+## 📜 License & links
+
+- **License:** [MIT](LICENSE)
+- **Live demo:** https://role-call-taylordrew4u2s-projects.vercel.app
+- **Repository:** https://github.com/taylordrew4u2/Role-Call
 
 <div align="center">
 

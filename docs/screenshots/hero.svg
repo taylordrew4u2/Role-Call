@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#E11D2A"/>
+      <stop offset="1" stop-color="#f43f5e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="380" rx="16" fill="url(#bg)"/>
+  <!-- clapperboard mark -->
+  <g transform="translate(80,120)">
+    <rect x="0" y="34" width="150" height="110" rx="10" fill="#0b1220" stroke="#334155" stroke-width="2"/>
+    <g transform="translate(0,0)">
+      <rect x="-2" y="0" width="156" height="34" rx="6" fill="#111827" stroke="#334155" stroke-width="2"/>
+      <g fill="url(#red)">
+        <polygon points="6,2 28,2 14,32 -2,32"/>
+        <polygon points="40,2 62,2 48,32 26,32"/>
+        <polygon points="74,2 96,2 82,32 60,32"/>
+        <polygon points="108,2 130,2 116,32 94,32"/>
+      </g>
+    </g>
+    <circle cx="120" cy="92" r="9" fill="#E11D2A"/>
+    <text x="22" y="98" fill="#e2e8f0" font-size="20" font-weight="700">ACTION</text>
+  </g>
+  <!-- wordmark + tagline -->
+  <text x="270" y="150" fill="#ffffff" font-size="68" font-weight="800" letter-spacing="-1">Role<tspan fill="#E11D2A">Call</tspan></text>
+  <text x="272" y="196" fill="#94a3b8" font-size="25" font-weight="500">Action starts with everyone knowing their role.</text>
+  <!-- feature chips -->
+  <g font-size="17" font-weight="600">
+    <g transform="translate(272,236)">
+      <rect width="220" height="40" rx="20" fill="#1e293b" stroke="#334155"/>
+      <text x="22" y="26" fill="#e2e8f0">📝 Script → Shot list</text>
+    </g>
+    <g transform="translate(506,236)">
+      <rect width="200" height="40" rx="20" fill="#1e293b" stroke="#334155"/>
+      <text x="20" y="26" fill="#e2e8f0">🎭 Cast from script</text>
+    </g>
+    <g transform="translate(720,236)">
+      <rect width="232" height="40" rx="20" fill="#1e293b" stroke="#334155"/>
+      <text x="20" y="26" fill="#e2e8f0">🎟️ Invite • Roles • Series</text>
+    </g>
+  </g>
+  <!-- record dot -->
+  <g transform="translate(1080,70)">
+    <circle r="8" fill="#E11D2A"><animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/></circle>
+    <text x="20" y="6" fill="#94a3b8" font-size="16" font-weight="700">REC</text>
+  </g>
+</svg>
