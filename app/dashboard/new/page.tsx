@@ -108,7 +108,7 @@ function NewProjectForm() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center gap-4">
-        <Link href="/dashboard" className="text-slate-500 hover:text-slate-900 transition-colors">
+        <Link href="/dashboard" aria-label="Back to dashboard" className="text-slate-500 hover:text-slate-900 transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex items-center gap-2 font-bold text-xl text-slate-900">

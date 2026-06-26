@@ -32,6 +32,8 @@ export function CastBoard({
     member: ProjectMember | null;
   } | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<ProjectMember | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   const cast = members.filter((m) => m.kind === "cast");
   const crew = members.filter((m) => m.kind !== "cast");
@@ -100,15 +102,27 @@ export function CastBoard({
       setDialog(null);
       return true;
     }
+    toast("Couldn't save. Please try again.", "error");
     return false;
   }
 
   async function removeMember(member: ProjectMember) {
-    if (!confirm(`Remove ${member.displayName}?`)) return;
-    const res = await fetch(`/api/projects/${projectId}/members/${member.id}`, {
-      method: "DELETE",
-    });
-    if (res.ok) setMembers((m) => m.filter((x) => x.id !== member.id));
+    setRemoving(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members/${member.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setMembers((m) => m.filter((x) => x.id !== member.id));
+        setConfirmRemove(null);
+      } else {
+        toast(`Couldn't remove ${member.displayName}. Please try again.`, "error");
+      }
+    } catch {
+      toast("Network error. Please try again.", "error");
+    } finally {
+      setRemoving(false);
+    }
   }
 
   async function copyInviteLink(member: ProjectMember) {
@@ -170,8 +184,8 @@ export function CastBoard({
             <Button
               size="sm"
               variant="ghost"
+              aria-label={`Copy invite link for ${member.displayName}`}
               onClick={() => copyInviteLink(member)}
-              title="Copy invite link"
             >
               <LinkIcon className="h-3.5 w-3.5" />
             </Button>
@@ -180,16 +194,21 @@ export function CastBoard({
             <Button
               size="sm"
               variant="ghost"
+              aria-label={`Edit ${member.displayName}`}
               onClick={() =>
                 setDialog({ mode: member.kind === "cast" ? "cast" : "crew", member })
               }
-              title="Edit"
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
           )}
           {isOwner && (
-            <Button size="sm" variant="ghost" onClick={() => removeMember(member)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label={`Remove ${member.displayName}`}
+              onClick={() => setConfirmRemove(member)}
+            >
               <Trash2 className="h-3.5 w-3.5 text-red-600" />
             </Button>
           )}
@@ -284,6 +303,31 @@ export function CastBoard({
           onSave={saveMember}
         />
       )}
+
+      {confirmRemove && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4">
+            <h2 className="text-base font-semibold text-slate-900 mb-1">Remove member?</h2>
+            <p className="text-sm text-slate-600 mb-5">
+              <strong>{confirmRemove.displayName}</strong> will be removed from this project.
+              They can be re-invited later.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" size="sm" disabled={removing} onClick={() => setConfirmRemove(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={removing}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => removeMember(confirmRemove)}
+              >
+                {removing ? "Removing…" : "Remove"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -357,8 +401,9 @@ function PersonDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label>Name</Label>
+            <Label htmlFor="person-name">Name</Label>
             <Input
+              id="person-name"
               placeholder={isCast ? "e.g. Alex Rivera" : "e.g. Jordan Smith"}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
@@ -366,8 +411,9 @@ function PersonDialog({
           </div>
           {isCast && (
             <div className="space-y-1">
-              <Label>Character</Label>
+              <Label htmlFor="person-character">Character</Label>
               <Input
+                id="person-character"
                 placeholder="e.g. Detective Mara"
                 value={character}
                 onChange={(e) => setCharacter(e.target.value)}
@@ -375,8 +421,9 @@ function PersonDialog({
             </div>
           )}
           <div className="space-y-1">
-            <Label>Email {isCast ? "(optional)" : ""}</Label>
+            <Label htmlFor="person-email">Email {isCast ? "(optional)" : ""}</Label>
             <Input
+              id="person-email"
               type="email"
               placeholder="name@example.com"
               value={email}
