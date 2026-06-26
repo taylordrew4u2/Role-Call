@@ -25,6 +25,7 @@ import { AssignModal } from "@/components/AssignModal";
 import { DutiesModal } from "@/components/DutiesModal";
 import { TeamSidebar } from "@/components/TeamSidebar";
 import { InviteModal } from "@/components/InviteModal";
+import { toast } from "@/components/Toaster";
 import {
   BookOpen,
   Users2,
@@ -254,8 +255,9 @@ export function RoleAssignmentBoard({
 
   async function handleLoadTemplate() {
     if (members.length < 3) {
-      alert(
-        "The Lean 8-Person Template needs at least 3 team members. Please invite 2 more people first."
+      toast(
+        "The Lean 8-Person Template needs at least 3 team members. Invite 2 more people first.",
+        "error"
       );
       return;
     }
@@ -281,7 +283,7 @@ export function RoleAssignmentBoard({
       const result = await res.json();
       setAssignments(result.assignments);
     } catch (e) {
-      alert("Failed to load template. Please try again.");
+      toast("Failed to load template. Please try again.", "error");
       console.error(e);
     } finally {
       setLoadingTemplate(false);

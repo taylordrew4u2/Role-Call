@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil } from "lucide-react";
 import { PRODUCTION_TYPES } from "@/lib/production-types";
+import { toast } from "@/components/Toaster";
 
 const selectClass =
   "flex h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500";
@@ -57,7 +58,7 @@ export function EditProjectButton({
         setOpen(false);
         router.refresh();
       } else {
-        alert("Couldn't save changes. Please try again.");
+        toast("Couldn't save changes. Please try again.", "error");
       }
     } finally {
       setSaving(false);
@@ -84,12 +85,13 @@ export function EditProjectButton({
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Label htmlFor="edit-title">Title</Label>
+              <Input id="edit-title" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Type</Label>
+              <Label htmlFor="edit-type">Type</Label>
               <select
+                id="edit-type"
                 className={selectClass}
                 value={projectType}
                 onChange={(e) => setProjectType(e.target.value)}
@@ -103,16 +105,18 @@ export function EditProjectButton({
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Shoot date</Label>
+              <Label htmlFor="edit-shoot-date">Shoot date</Label>
               <Input
+                id="edit-shoot-date"
                 type="date"
                 value={shootDate}
                 onChange={(e) => setShootDate(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Description</Label>
+              <Label htmlFor="edit-description">Description</Label>
               <textarea
+                id="edit-description"
                 className="flex min-h-[80px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
