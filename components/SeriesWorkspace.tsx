@@ -59,6 +59,11 @@ export function SeriesWorkspace({
   const [inviteError, setInviteError] = useState("");
 
   const [addingId, setAddingId] = useState("");
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   async function invite() {
     setInviteError("");
@@ -101,21 +106,27 @@ export function SeriesWorkspace({
   }
 
   async function removeMember(m: SeriesMember) {
-    if (!confirm(`Remove ${m.displayName} from the whole series?`)) return;
-    try {
-      const res = await fetch(`/api/series/${seriesId}/members/${m.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        toast(d.error || "Couldn't remove member.");
-        return;
-      }
-      setMembers((prev) => prev.filter((x) => x.id !== m.id));
-      toast(`${m.displayName} removed from the series.`);
-    } catch {
-      toast("Network error. Please try again.");
-    }
+    setPendingConfirm({
+      message: `Remove ${m.displayName} from the whole series?`,
+      confirmLabel: "Remove",
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          const res = await fetch(`/api/series/${seriesId}/members/${m.id}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) {
+            const d = await res.json();
+            toast(d.error || "Couldn't remove member.");
+            return;
+          }
+          setMembers((prev) => prev.filter((x) => x.id !== m.id));
+          toast(`${m.displayName} removed from the series.`);
+        } catch {
+          toast("Network error. Please try again.");
+        }
+      },
+    });
   }
 
   async function addProject() {
@@ -146,22 +157,28 @@ export function SeriesWorkspace({
   }
 
   async function detachProject(p: Project) {
-    if (!confirm(`Remove "${p.title}" from this series? The project itself isn't deleted.`)) return;
-    try {
-      const res = await fetch(`/api/series/${seriesId}/projects?projectId=${p.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        toast(d.error || "Couldn't remove project.");
-        return;
-      }
-      setProjectList((prev) => prev.filter((x) => x.id !== p.id));
-      setAddable((prev) => [...prev, p]);
-      toast("Project removed from the series.");
-    } catch {
-      toast("Network error. Please try again.");
-    }
+    setPendingConfirm({
+      message: `Remove "${p.title}" from this series? The project itself isn't deleted.`,
+      confirmLabel: "Remove",
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        try {
+          const res = await fetch(`/api/series/${seriesId}/projects?projectId=${p.id}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) {
+            const d = await res.json();
+            toast(d.error || "Couldn't remove project.");
+            return;
+          }
+          setProjectList((prev) => prev.filter((x) => x.id !== p.id));
+          setAddable((prev) => [...prev, p]);
+          toast("Project removed from the series.");
+        } catch {
+          toast("Network error. Please try again.");
+        }
+      },
+    });
   }
 
   return (
@@ -325,6 +342,23 @@ export function SeriesWorkspace({
           </div>
         </aside>
       </div>
+
+      {/* Inline confirmation overlay */}
+      {pendingConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full mx-4 space-y-4">
+            <p className="text-sm text-slate-800">{pendingConfirm.message}</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPendingConfirm(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={pendingConfirm.onConfirm}>
+                {pendingConfirm.confirmLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invite modal */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>

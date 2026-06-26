@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { toast } from "@/components/Toaster";
 
 export function DeleteProjectButton({
   projectId,
@@ -29,11 +30,11 @@ export function DeleteProjectButton({
         router.push("/dashboard");
         router.refresh();
       } else {
-        alert("Couldn't delete the project. Please try again.");
+        toast("Couldn't delete the project. Please try again.", "error");
         setDeleting(false);
       }
     } catch {
-      alert("Network error. Please try again.");
+      toast("Network error. Please try again.", "error");
       setDeleting(false);
     }
   }

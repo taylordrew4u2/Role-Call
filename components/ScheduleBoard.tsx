@@ -11,8 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarDays, Plus, Pencil, Trash2, Clock, MapPin } from "lucide-react";
+import { CalendarDays, Plus, Pencil, Trash2, Clock, MapPin, UtensilsCrossed, LogOut } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { toast } from "@/components/Toaster";
 import type { Scene, Shot, ShootDay } from "@/lib/db/schema";
 
 const selectClass =
@@ -55,6 +56,9 @@ export function ScheduleBoard({
       if (res.ok) {
         const u = await res.json();
         setDays((d) => d.map((x) => (x.id === u.id ? u : x)));
+      } else {
+        toast("Couldn't save shoot day. Please try again.", "error");
+        return;
       }
     } else {
       const res = await fetch(`${api}/shoot-days`, {
@@ -65,6 +69,9 @@ export function ScheduleBoard({
       if (res.ok) {
         const created = await res.json();
         setDays((d) => [...d, created]);
+      } else {
+        toast("Couldn't create shoot day. Please try again.", "error");
+        return;
       }
     }
     setDayDialog({ open: false, day: null });
@@ -153,35 +160,73 @@ export function ScheduleBoard({
           const dayShots = shots.filter((s) => s.shootDayId === day.id);
           return (
             <div key={day.id} className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-100 flex items-start justify-between gap-3 bg-slate-50">
-                <div>
-                  <h3 className="font-semibold text-slate-900">Day {day.dayNumber}</h3>
-                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
-                    <span>{formatDate(day.shootDate)}</span>
-                    {day.callTime && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {day.callTime}
-                      </span>
+              {/* Call Sheet Header */}
+              <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-slate-900">
+                      Day {day.dayNumber}
+                      {day.shootDate && (
+                        <span className="ml-2 font-normal text-slate-500 text-sm">
+                          {formatDate(day.shootDate)}
+                        </span>
+                      )}
+                    </h3>
+
+                    {/* Call / Lunch / Wrap times row */}
+                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                      {day.callTime && (
+                        <span className="flex items-center gap-1 text-emerald-700 font-medium">
+                          <Clock className="h-3 w-3" /> Call {day.callTime}
+                        </span>
+                      )}
+                      {day.lunchTime && (
+                        <span className="flex items-center gap-1 text-amber-700 font-medium">
+                          <UtensilsCrossed className="h-3 w-3" /> Lunch {day.lunchTime}
+                        </span>
+                      )}
+                      {day.wrapTime && (
+                        <span className="flex items-center gap-1 text-slate-600 font-medium">
+                          <LogOut className="h-3 w-3" /> Wrap {day.wrapTime}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Location section */}
+                    {(day.location || day.locationAddress || day.locationNotes) && (
+                      <div className="mt-2 rounded-md bg-white border border-slate-200 px-3 py-2 text-xs space-y-0.5">
+                        {day.location && (
+                          <p className="flex items-center gap-1.5 font-medium text-slate-800">
+                            <MapPin className="h-3 w-3 text-red-500 shrink-0" />
+                            {day.location}
+                          </p>
+                        )}
+                        {day.locationAddress && (
+                          <p className="text-slate-500 pl-4">{day.locationAddress}</p>
+                        )}
+                        {day.locationNotes && (
+                          <p className="text-slate-400 pl-4 italic">{day.locationNotes}</p>
+                        )}
+                      </div>
                     )}
-                    {day.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {day.location}
-                      </span>
+
+                    {day.notes && (
+                      <p className="text-xs text-slate-500 mt-1.5">{day.notes}</p>
                     )}
                   </div>
-                  {day.notes && <p className="text-xs text-slate-500 mt-1">{day.notes}</p>}
+                  {isOwner && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button size="sm" variant="ghost" aria-label={`Edit Day ${day.dayNumber}`} onClick={() => setDayDialog({ open: true, day })}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" aria-label={`Delete Day ${day.dayNumber}`} onClick={() => deleteDay(day)}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                {isOwner && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button size="sm" variant="ghost" onClick={() => setDayDialog({ open: true, day })}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => deleteDay(day)}>
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
-                )}
               </div>
+
               <div className="px-4">
                 {dayShots.length === 0 ? (
                   <p className="py-4 text-sm text-slate-400">
@@ -240,8 +285,12 @@ function DayDialog({
 }) {
   const [dayNumber, setDayNumber] = useState(String(day?.dayNumber ?? nextDayNumber));
   const [shootDate, setShootDate] = useState(day?.shootDate ?? "");
-  const [location, setLocation] = useState(day?.location ?? "");
   const [callTime, setCallTime] = useState(day?.callTime ?? "");
+  const [lunchTime, setLunchTime] = useState(day?.lunchTime ?? "");
+  const [wrapTime, setWrapTime] = useState(day?.wrapTime ?? "");
+  const [location, setLocation] = useState(day?.location ?? "");
+  const [locationAddress, setLocationAddress] = useState(day?.locationAddress ?? "");
+  const [locationNotes, setLocationNotes] = useState(day?.locationNotes ?? "");
   const [notes, setNotes] = useState(day?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -251,9 +300,13 @@ function DayDialog({
       {
         dayNumber: parseInt(dayNumber, 10) || nextDayNumber,
         shootDate: shootDate || null,
-        location,
-        callTime,
-        notes,
+        callTime: callTime || null,
+        lunchTime: lunchTime || null,
+        wrapTime: wrapTime || null,
+        location: location || null,
+        locationAddress: locationAddress || null,
+        locationNotes: locationNotes || null,
+        notes: notes || null,
       },
       day
     );
@@ -262,11 +315,12 @@ function DayDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{day ? `Edit Day ${day.dayNumber}` : "Add Shoot Day"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Day & Date */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Day #</Label>
@@ -277,23 +331,53 @@ function DayDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Date</Label>
+              <Label>Shoot Date</Label>
               <Input type="date" value={shootDate} onChange={(e) => setShootDate(e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Call time</Label>
-              <Input value={callTime} onChange={(e) => setCallTime(e.target.value)} placeholder="7:00 AM" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Location</Label>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Main set" />
+
+          {/* Call Sheet Times */}
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Call Sheet Times</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="dlg-call-time">Call Time</Label>
+                <Input id="dlg-call-time" value={callTime} onChange={(e) => setCallTime(e.target.value)} placeholder="7:00 AM" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="dlg-lunch-time">Lunch</Label>
+                <Input id="dlg-lunch-time" value={lunchTime} onChange={(e) => setLunchTime(e.target.value)} placeholder="12:30 PM" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="dlg-wrap-time">Wrap</Label>
+                <Input id="dlg-wrap-time" value={wrapTime} onChange={(e) => setWrapTime(e.target.value)} placeholder="6:00 PM" />
+              </div>
             </div>
           </div>
+
+          {/* Location */}
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Location</p>
+            <div className="space-y-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="dlg-location">Location Name</Label>
+                <Input id="dlg-location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Main Set, Studio A" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="dlg-location-address">Address</Label>
+                <Input id="dlg-location-address" value={locationAddress} onChange={(e) => setLocationAddress(e.target.value)} placeholder="123 Main St, City, State" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="dlg-location-notes">Parking / Access Notes</Label>
+                <Input id="dlg-location-notes" value={locationNotes} onChange={(e) => setLocationNotes(e.target.value)} placeholder="Park in lot B, enter via rear gate" />
+              </div>
+            </div>
+          </div>
+
+          {/* General Notes */}
           <div className="space-y-1.5">
-            <Label>Notes</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything the crew should know" />
+            <Label htmlFor="dlg-notes">General Notes</Label>
+            <Input id="dlg-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything the crew should know" />
           </div>
         </div>
         <DialogFooter>

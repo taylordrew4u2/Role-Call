@@ -103,6 +103,28 @@ export default async function ChecksPage({ params }: { params: Params }) {
     );
   }
 
+  // Call sheet completeness
+  if (days.length > 0) {
+    const missingCallTime = days.filter((d) => !d.callTime);
+    const missingLocation = days.filter((d) => !d.location);
+    if (missingCallTime.length > 0) {
+      checks.push({
+        level: "warn",
+        title: `${missingCallTime.length} shoot day${missingCallTime.length !== 1 ? "s" : ""} missing a call time`,
+        detail: "Add call times on the Schedule tab so your crew knows when to arrive",
+      });
+    } else {
+      checks.push({ level: "ok", title: "All shoot days have a call time" });
+    }
+    if (missingLocation.length > 0) {
+      checks.push({
+        level: "info",
+        title: `${missingLocation.length} shoot day${missingLocation.length !== 1 ? "s" : ""} missing a location`,
+        detail: "Add locations on the Schedule tab",
+      });
+    }
+  }
+
   const warnings = checks.filter((c) => c.level === "warn").length;
 
   return (

@@ -45,6 +45,7 @@ export default async function ProjectLayout({
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard"
+            aria-label="Back to dashboard"
             className="text-slate-500 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />

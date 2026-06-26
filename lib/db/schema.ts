@@ -181,7 +181,11 @@ export const shootDays = pgTable("shoot_days", {
   dayNumber: integer("day_number").notNull().default(1),
   shootDate: date("shoot_date"),
   location: text("location"),
+  locationAddress: text("location_address"),
+  locationNotes: text("location_notes"),
   callTime: text("call_time"),
+  wrapTime: text("wrap_time"),
+  lunchTime: text("lunch_time"),
   notes: text("notes"),
   sortOrder: integer("sort_order").notNull().default(0),
 });

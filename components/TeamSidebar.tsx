@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Users, Link as LinkIcon, Trash2 } from "lucide-react";
 import { toast } from "@/components/Toaster";
@@ -21,6 +22,7 @@ interface TeamSidebarProps {
 }
 
 export function TeamSidebar({ members, projectId, onInvite }: TeamSidebarProps) {
+  const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -47,7 +49,7 @@ export function TeamSidebar({ members, projectId, onInvite }: TeamSidebarProps) 
       } else {
         toast(`${member.displayName} removed.`);
         setConfirmDelete(null);
-        window.location.reload();
+        router.refresh();
       }
     } catch {
       toast("Network error. Please try again.");
