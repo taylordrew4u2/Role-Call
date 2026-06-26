@@ -249,6 +249,11 @@ export function ShotListBoard({
   // ---- Mass selection ----
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   function toggleSelected(id: number) {
     setSelected((prev) => {
@@ -285,37 +290,42 @@ export function ShotListBoard({
   // Regenerating replaces the existing scenes & shots so it doesn't pile up
   // duplicates each time it's run.
   async function generateScenesFromScript(mode: "action" | "dialogue" | "both") {
-    if (
-      shots.length > 0 &&
-      !confirm("Regenerate from the script? This replaces the current scenes and shots.")
-    ) {
+    async function doGenerate() {
+      setGenerating(true);
+      try {
+        const res = await fetch(`${api}/scenes/from-script`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, cameraSetup, replace: true }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          toast(data.error ?? "Couldn't read the script.", "error");
+          return;
+        }
+        setScenes(data.scenes ?? []);
+        setShots(data.shots ?? []);
+        const sceneCount = data.scenes?.length ?? 0;
+        const shotCount = data.shots?.length ?? 0;
+        toast(
+          `Generated ${sceneCount} scene${sceneCount === 1 ? "" : "s"} and ${shotCount} shot${shotCount === 1 ? "" : "s"} from the script.`
+        );
+        setGenerateOpen(false);
+      } catch {
+        toast("Network error. Please try again.", "error");
+      } finally {
+        setGenerating(false);
+      }
+    }
+    if (shots.length > 0) {
+      setPendingConfirm({
+        message: "Regenerate from the script? This replaces the current scenes and shots.",
+        confirmLabel: "Regenerate",
+        onConfirm: doGenerate,
+      });
       return;
     }
-    setGenerating(true);
-    try {
-      const res = await fetch(`${api}/scenes/from-script`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, cameraSetup, replace: true }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast(data.error ?? "Couldn't read the script.", "error");
-        return;
-      }
-      setScenes(data.scenes ?? []);
-      setShots(data.shots ?? []);
-      const sceneCount = data.scenes?.length ?? 0;
-      const shotCount = data.shots?.length ?? 0;
-      toast(
-        `Generated ${sceneCount} scene${sceneCount === 1 ? "" : "s"} and ${shotCount} shot${shotCount === 1 ? "" : "s"} from the script.`
-      );
-      setGenerateOpen(false);
-    } catch {
-      toast("Network error. Please try again.", "error");
-    } finally {
-      setGenerating(false);
-    }
+    await doGenerate();
   }
 
   const sceneName = (sceneId: number | null) => {
@@ -415,12 +425,17 @@ export function ShotListBoard({
   }
 
   async function deleteScene(scene: Scene) {
-    if (!confirm(`Delete scene "${scene.heading}"? Its shots will be kept but unlinked.`)) return;
-    const res = await fetch(`${api}/scenes/${scene.id}`, { method: "DELETE" });
-    if (res.ok) {
-      setScenes((s) => s.filter((x) => x.id !== scene.id));
-      setShots((sh) => sh.map((x) => (x.sceneId === scene.id ? { ...x, sceneId: null } : x)));
-    }
+    setPendingConfirm({
+      message: `Delete scene "${scene.heading}"? Its shots will be kept but unlinked.`,
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        const res = await fetch(`${api}/scenes/${scene.id}`, { method: "DELETE" });
+        if (res.ok) {
+          setScenes((s) => s.filter((x) => x.id !== scene.id));
+          setShots((sh) => sh.map((x) => (x.sceneId === scene.id ? { ...x, sceneId: null } : x)));
+        }
+      },
+    });
   }
 
   // ---- Shot actions ----
@@ -472,49 +487,64 @@ export function ShotListBoard({
     }
   }
 
-  async function deleteShot(shot: Shot) {
-    if (!confirm("Delete this shot?")) return;
-    const res = await fetch(`${api}/shots/${shot.id}`, { method: "DELETE" });
-    if (res.ok) setShots((s) => s.filter((x) => x.id !== shot.id));
+  function deleteShot(shot: Shot) {
+    setPendingConfirm({
+      message: "Delete this shot?",
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        const res = await fetch(`${api}/shots/${shot.id}`, { method: "DELETE" });
+        if (res.ok) setShots((s) => s.filter((x) => x.id !== shot.id));
+      },
+    });
   }
 
   // ---- Mass delete ----
-  async function deleteSelectedShots() {
+  function deleteSelectedShots() {
     const ids = [...selected];
     if (ids.length === 0) return;
-    if (!confirm(`Delete ${ids.length} selected shot${ids.length === 1 ? "" : "s"}?`)) return;
-    const res = await fetch(`${api}/shots/bulk`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
+    setPendingConfirm({
+      message: `Delete ${ids.length} selected shot${ids.length === 1 ? "" : "s"}?`,
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        const res = await fetch(`${api}/shots/bulk`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+        if (res.ok) {
+          const removed = new Set(ids);
+          setShots((s) => s.filter((x) => !removed.has(x.id)));
+          setSelected(new Set());
+          setSelectMode(false);
+          toast(`Deleted ${ids.length} shot${ids.length === 1 ? "" : "s"}.`);
+        } else {
+          toast("Couldn't delete the selected shots.", "error");
+        }
+      },
     });
-    if (res.ok) {
-      const removed = new Set(ids);
-      setShots((s) => s.filter((x) => !removed.has(x.id)));
-      setSelected(new Set());
-      setSelectMode(false);
-      toast(`Deleted ${ids.length} shot${ids.length === 1 ? "" : "s"}.`);
-    } else {
-      toast("Couldn't delete the selected shots.", "error");
-    }
   }
 
-  async function clearAllShots() {
+  function clearAllShots() {
     if (shots.length === 0) return;
-    if (!confirm(`Delete all ${shots.length} shots? This can't be undone.`)) return;
-    const res = await fetch(`${api}/shots/bulk`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ all: true }),
+    setPendingConfirm({
+      message: `Delete all ${shots.length} shots? This can't be undone.`,
+      confirmLabel: "Delete all",
+      onConfirm: async () => {
+        const res = await fetch(`${api}/shots/bulk`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ all: true }),
+        });
+        if (res.ok) {
+          setShots([]);
+          setScenes([]);
+          setSelected(new Set());
+          toast("All shots deleted.");
+        } else {
+          toast("Couldn't delete all shots.", "error");
+        }
+      },
     });
-    if (res.ok) {
-      setShots([]);
-      setSelected(new Set());
-      setSelectMode(false);
-      toast("All shots deleted.");
-    } else {
-      toast("Couldn't delete the shots.", "error");
-    }
   }
 
   const selection = { mode: selectMode, selected, toggle: toggleSelected };
@@ -843,6 +873,31 @@ export function ShotListBoard({
           onClose={() => setShotDialog({ open: false, shot: null, sceneId: null })}
           onSave={saveShot}
         />
+      )}
+      {pendingConfirm && (
+        <Dialog open onOpenChange={(o) => !o && setPendingConfirm(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Are you sure?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-600">{pendingConfirm.message}</p>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setPendingConfirm(null)}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  const fn = pendingConfirm.onConfirm;
+                  setPendingConfirm(null);
+                  fn();
+                }}
+              >
+                {pendingConfirm.confirmLabel ?? "Confirm"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

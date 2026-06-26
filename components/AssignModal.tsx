@@ -113,6 +113,7 @@ export function AssignModal({
             className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search members"
           />
         </div>
 
@@ -154,6 +155,7 @@ export function AssignModal({
                 <button
                   key={member.id}
                   onClick={() => selectMember(member.id)}
+                  aria-label={`Assign ${member.displayName}`}
                   className={`w-full flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors
                     ${isPrimary ? "bg-slate-900 text-white" : isBackup ? "bg-slate-200 text-slate-900" : "hover:bg-slate-100 text-slate-900"}`}
                 >

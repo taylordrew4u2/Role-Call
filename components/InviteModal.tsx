@@ -116,11 +116,12 @@ export function InviteModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Invite as</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <Label htmlFor="inv-role-group">Invite as</Label>
+            <div id="inv-role-group" role="group" aria-label="Invite as" className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setPosition("director")}
+                aria-pressed={position === "director"}
                 className={`flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                   position === "director"
                     ? "border-slate-900 bg-slate-900 text-white"
@@ -133,6 +134,7 @@ export function InviteModal({
               <button
                 type="button"
                 onClick={() => setPosition("writer")}
+                aria-pressed={position === "writer"}
                 className={`flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                   position === "writer"
                     ? "border-slate-900 bg-slate-900 text-white"
@@ -175,9 +177,9 @@ export function InviteModal({
           )}
           {inviteUrl && (
             <div className="space-y-1.5">
-              <Label>Invite link</Label>
+              <Label htmlFor="inv-link">Invite link</Label>
               <div className="flex items-center gap-2">
-                <Input readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
+                <Input id="inv-link" readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
                 <Button
                   type="button"
                   variant="outline"
