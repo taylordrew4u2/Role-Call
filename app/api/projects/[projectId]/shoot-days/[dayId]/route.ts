@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { shootDays } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireProjectDirector } from "@/lib/project-access";
+import { ensureCallSheetSchema } from "@/lib/db/ensure-call-sheet-schema";
 
 type Params = Promise<{ projectId: string; dayId: string }>;
 
@@ -9,7 +10,11 @@ const FIELDS = [
   "dayNumber",
   "shootDate",
   "location",
+  "locationAddress",
+  "locationNotes",
   "callTime",
+  "wrapTime",
+  "lunchTime",
   "notes",
   "sortOrder",
 ] as const;
@@ -17,6 +22,7 @@ const FIELDS = [
 // PATCH /api/projects/[projectId]/shoot-days/[dayId]
 export async function PATCH(request: Request, { params }: { params: Params }) {
   const { projectId, dayId } = await params;
+  await ensureCallSheetSchema();
   const access = await requireProjectDirector(projectId);
   if (!access.ok) return access.response;
 
