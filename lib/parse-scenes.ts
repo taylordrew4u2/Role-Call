@@ -451,10 +451,9 @@ export function parseScenesFromScript(text: string): ParsedScene[] {
     current.action.push(line);
   }
 
-  if (scenes.length > 0) return scenes;
-
-  // No slug headings. Try a dialogue-aware pass first (captures speakers and
-  // dialogue from Zoom/stage-style scripts), then fall back to paragraph
-  // chunking for pure prose.
-  return dialogueAwareFallback(lines) ?? chunkFallback(lines);
+  // Only return scenes that were explicitly marked in the script (slug lines,
+  // SCENE markers, or clear ALL-CAPS headings). Do not fabricate scenes from
+  // paragraph breaks or dialogue blocks — if the script has no scene headings,
+  // the caller gets an empty array and can decide what to do.
+  return scenes;
 }
