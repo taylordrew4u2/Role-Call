@@ -39,21 +39,19 @@ export default async function ScriptPage({ params }: { params: Params }) {
     .from(projectMembers)
     .where(eq(projectMembers.projectId, id));
 
-  // Directors manage the script (appoint writer, etc.) like the owner.
   const canManage = await isProjectManager(project, userId);
   const writerId = writerIdOf(project);
   const isWriter = writerId === userId;
   // Only owners, directors, and the writer see the editing tab.
   const canViewEditing = await isProjectEditor(project, userId);
 
-  // Only owner, directors, and the appointed writer can see the editing tab and
-  // suggestions. Everyone else (cast, crew) sees only the published final script.
-  const canViewEditing = canManage || isWriter;
-
-  // People who could be appointed as writer: members who have actually joined.
   const eligibleWriters = members
     .filter((m) => m.clerkUserId)
     .map((m) => ({ clerkUserId: m.clerkUserId as string, displayName: m.displayName }));
+
+  const cast = members
+    .filter((m) => m.kind === "cast")
+    .map((m) => ({ displayName: m.displayName, character: m.character ?? null }));
 
   return (
     <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6">
@@ -65,12 +63,12 @@ export default async function ScriptPage({ params }: { params: Params }) {
         ownerId={project.ownerId}
         writerId={writerId}
         eligibleWriters={eligibleWriters}
+        cast={cast}
         initialContent={script?.content ?? ""}
         initialFinalContent={script?.finalContent ?? ""}
         initialFileUrl={script?.fileUrl ?? null}
         initialFileName={script?.fileName ?? null}
         initialSuggestions={suggestions}
-        canViewEditing={canViewEditing}
       />
     </main>
   );
