@@ -7,6 +7,7 @@ import {
   timestamp,
   jsonb,
   date,
+  json,
 } from "drizzle-orm/pg-core";
 
 // A Series groups multiple projects that share one team. Anyone invited to the
@@ -52,7 +53,8 @@ export const seriesMembers = pgTable("series_members", {
   email: text("email"),
   displayName: text("display_name").notNull(),
   kind: text("kind").notNull().default("crew"), // crew | cast
-  position: text("position"), // writer | director | null
+  position: text("position"), // legacy single-role field
+  positions: json("positions").$type<string[]>(), // multi-role: ["owner","writer","director"]
   status: text("status").notNull().default("invited"), // invited | active
 });
 
@@ -69,10 +71,10 @@ export const projectMembers = pgTable("project_members", {
   email: text("email"), // optional — actors may be added without an email
   displayName: text("display_name").notNull(),
   kind: text("kind").notNull().default("crew"), // crew | cast
-  // The position this member was invited as. Currently writer | director;
-  // a member invited as "writer" becomes the project's appointed script writer
-  // when they accept.
-  position: text("position"), // writer | director | null
+  // Legacy single-role field kept for back-compat. New code uses `positions`.
+  position: text("position"), // writer | director | owner | null
+  // Multi-role field: any combination of "owner" | "director" | "writer"
+  positions: json("positions").$type<string[]>(),
   character: text("character"), // character played, for cast
   status: text("status").notNull().default("invited"), // invited | active
 });
