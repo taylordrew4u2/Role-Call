@@ -44,6 +44,14 @@ export function ensureSeriesSchema(): Promise<void> {
         ALTER TABLE series_members
           ADD COLUMN IF NOT EXISTS position text
       `);
+      await db.execute(sql`
+        ALTER TABLE project_members
+          ADD COLUMN IF NOT EXISTS positions jsonb
+      `);
+      await db.execute(sql`
+        ALTER TABLE series_members
+          ADD COLUMN IF NOT EXISTS positions jsonb
+      `);
     })().catch((err) => {
       ensured = undefined;
       throw err;

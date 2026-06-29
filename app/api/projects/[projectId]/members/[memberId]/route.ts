@@ -6,6 +6,7 @@ import { requireProjectOwner } from "@/lib/project-access";
 type Params = Promise<{ projectId: string; memberId: string }>;
 
 const FIELDS = ["displayName", "character", "email", "kind"] as const;
+const CREW_POSITIONS = ["owner", "director", "writer"] as const;
 
 // PATCH /api/projects/[projectId]/members/[memberId]
 export async function PATCH(request: Request, { params }: { params: Params }) {
@@ -24,6 +25,15 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
   if ("displayName" in updates && !String(updates.displayName ?? "").trim()) {
     return Response.json({ error: "A name is required" }, { status: 400 });
   }
+  // Handle positions array (crew management roles)
+  if ("positions" in body) {
+    const raw = body.positions;
+    if (!Array.isArray(raw) || raw.some((p: unknown) => !CREW_POSITIONS.includes(p as typeof CREW_POSITIONS[number]))) {
+      return Response.json({ error: "Invalid positions" }, { status: 400 });
+    }
+    updates.positions = raw;
+  }
+
   if (Object.keys(updates).length === 0) {
     return Response.json({ error: "No fields to update" }, { status: 400 });
   }

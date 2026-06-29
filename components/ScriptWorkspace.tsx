@@ -29,6 +29,7 @@ export function ScriptWorkspace({
   initialFileUrl,
   initialFileName,
   initialSuggestions,
+  canViewEditing = true,
 }: {
   projectId: number;
   isOwner: boolean;
@@ -41,6 +42,7 @@ export function ScriptWorkspace({
   initialFileUrl: string | null;
   initialFileName: string | null;
   initialSuggestions: ScriptSuggestion[];
+  canViewEditing?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("editing");
   const [content, setContent] = useState(initialContent);
@@ -111,6 +113,23 @@ export function ScriptWorkspace({
         "the appointed writer";
 
   const pendingCount = suggestions.filter((s) => s.status === "pending").length;
+
+  if (!canViewEditing) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-slate-400" />
+          <h2 className="text-lg font-semibold text-slate-900">Script</h2>
+        </div>
+        <FinalScript
+          finalContent={finalContent}
+          isWriter={false}
+          publishing={false}
+          onPublish={() => {}}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

@@ -6,7 +6,7 @@ import { desc, eq } from "drizzle-orm";
 import { ScriptWorkspace } from "@/components/ScriptWorkspace";
 import { writerIdOf } from "@/lib/script-access";
 import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
-import { isProjectManager } from "@/lib/project-access";
+import { isProjectManager, isProjectEditor } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -43,6 +43,8 @@ export default async function ScriptPage({ params }: { params: Params }) {
   const canManage = await isProjectManager(project, userId);
   const writerId = writerIdOf(project);
   const isWriter = writerId === userId;
+  // Only owners, directors, and the writer see the editing tab.
+  const canViewEditing = await isProjectEditor(project, userId);
 
   // People who could be appointed as writer: members who have actually joined.
   const eligibleWriters = members
@@ -63,6 +65,7 @@ export default async function ScriptPage({ params }: { params: Params }) {
         initialFileUrl={script?.fileUrl ?? null}
         initialFileName={script?.fileName ?? null}
         initialSuggestions={suggestions}
+        canViewEditing={canViewEditing}
       />
     </main>
   );
