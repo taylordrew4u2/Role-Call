@@ -46,6 +46,10 @@ export default async function ScriptPage({ params }: { params: Params }) {
   // Only owners, directors, and the writer see the editing tab.
   const canViewEditing = await isProjectEditor(project, userId);
 
+  // Only owner, directors, and the appointed writer can see the editing tab and
+  // suggestions. Everyone else (cast, crew) sees only the published final script.
+  const canViewEditing = canManage || isWriter;
+
   // People who could be appointed as writer: members who have actually joined.
   const eligibleWriters = members
     .filter((m) => m.clerkUserId)
@@ -57,6 +61,7 @@ export default async function ScriptPage({ params }: { params: Params }) {
         projectId={id}
         isOwner={canManage}
         isWriter={isWriter}
+        canViewEditing={canViewEditing}
         ownerId={project.ownerId}
         writerId={writerId}
         eligibleWriters={eligibleWriters}
