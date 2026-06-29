@@ -19,7 +19,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
   const body = await request.json().catch(() => ({}));
   const mode: ShotMode =
-    body?.mode === "dialogue" || body?.mode === "both" ? body.mode : "action";
+    body?.mode === "dialogue" || body?.mode === "both" || body?.mode === "line"
+      ? body.mode
+      : "action";
   // Single-camera (iPhone) shoots one person per shot; two cameras can hold
   // characters together. Body can override the project's saved setting.
   const setup = body?.cameraSetup ?? access.project.cameraSetup ?? "single";

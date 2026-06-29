@@ -289,7 +289,7 @@ export function ShotListBoard({
   // ---- Build scenes + shots from the saved script (local parsing, no cost) ----
   // Regenerating replaces the existing scenes & shots so it doesn't pile up
   // duplicates each time it's run.
-  async function generateScenesFromScript(mode: "action" | "dialogue" | "both") {
+  async function generateScenesFromScript(mode: "action" | "dialogue" | "both" | "line") {
     async function doGenerate() {
       setGenerating(true);
       try {
@@ -1516,12 +1516,12 @@ function GenerateFromScriptDialog({
 }: {
   busy: boolean;
   onClose: () => void;
-  onGenerate: (mode: "action" | "dialogue" | "both") => Promise<void>;
+  onGenerate: (mode: "action" | "dialogue" | "both" | "line") => Promise<void>;
 }) {
-  const [mode, setMode] = useState<"action" | "dialogue" | "both">("action");
+  const [mode, setMode] = useState<"action" | "dialogue" | "both" | "line">("action");
 
   const options: {
-    id: "action" | "dialogue" | "both";
+    id: "action" | "dialogue" | "both" | "line";
     title: string;
     desc: string;
   }[] = [
@@ -1539,6 +1539,11 @@ function GenerateFromScriptDialog({
       id: "both",
       title: "Full coverage",
       desc: "Establishing, action beats, plus full dialogue coverage (master, OTS, CUs).",
+    },
+    {
+      id: "line",
+      title: "By line",
+      desc: "One shot per character line — establishing shot then each character's full dialogue as its own shot.",
     },
   ];
 
