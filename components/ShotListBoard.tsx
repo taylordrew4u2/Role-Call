@@ -27,8 +27,6 @@ import {
   Clapperboard,
   Film,
   List,
-  Table2,
-  LayoutGrid,
   ClipboardPaste,
   Download,
   Copy,
@@ -44,7 +42,7 @@ import { parseShotLines } from "@/lib/parse-shots";
 import { suggestShotFields } from "@/lib/suggest-shot";
 import { toast } from "@/components/Toaster";
 
-type ViewMode = "scene" | "actor" | "table" | "cards";
+type ViewMode = "scene" | "actor";
 
 type Selection = {
   mode: boolean;
@@ -679,8 +677,6 @@ export function ShotListBoard({
             [
               { id: "scene", label: "By Scene", icon: List },
               { id: "actor", label: "By Cast", icon: Users },
-              { id: "table", label: "Table", icon: Table2 },
-              { id: "cards", label: "Cards", icon: LayoutGrid },
             ] as { id: ViewMode; label: string; icon: typeof List }[]
           ).map((v) => {
             const Icon = v.icon;
@@ -812,36 +808,6 @@ export function ShotListBoard({
         </div>
       )}
 
-      {/* Flat table view */}
-      {viewMode === "table" && hasShots && (
-        <FlatShotTable
-          shots={shots}
-          sceneName={sceneName}
-          canEdit={canEdit}
-          selection={selection}
-          onEditShot={(shot) =>
-            setShotDialog({ open: true, shot, sceneId: shot.sceneId })
-          }
-          onDeleteShot={deleteShot}
-        />
-      )}
-
-      {/* Cards view */}
-      {viewMode === "cards" && hasShots && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {shots.map((shot) => (
-            <ShotCard
-              key={shot.id}
-              shot={shot}
-              sceneName={sceneName(shot.sceneId)}
-              canEdit={canEdit}
-              selection={selection}
-              onEdit={() => setShotDialog({ open: true, shot, sceneId: shot.sceneId })}
-              onDelete={() => deleteShot(shot)}
-            />
-          ))}
-        </div>
-      )}
 
       {bulkOpen && (
         <BulkAddDialog
@@ -1362,77 +1328,6 @@ function FlatShotTable({
           ))}
         </TableBody>
       </Table>
-    </div>
-  );
-}
-
-function ShotCard({
-  shot,
-  sceneName,
-  canEdit,
-  selection,
-  onEdit,
-  onDelete,
-}: {
-  shot: Shot;
-  sceneName: string;
-  canEdit: boolean;
-  selection: Selection;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const specs = [shot.shotSize, shot.angle, shot.movement].filter(Boolean);
-  const isSelected = selection.selected.has(shot.id);
-  return (
-    <div
-      className={
-        "rounded-lg border bg-white p-4 flex flex-col " +
-        (selection.mode && isSelected
-          ? "border-slate-900 ring-1 ring-slate-900"
-          : "border-slate-200")
-      }
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {canEdit && selection.mode && (
-            <SelectBox checked={isSelected} onChange={() => selection.toggle(shot.id)} />
-          )}
-          <span className="font-semibold text-slate-900">
-            {shot.shotNumber ? `Shot ${shot.shotNumber}` : "Shot"}
-          </span>
-        </div>
-        {statusBadge(shot.status)}
-      </div>
-      {sceneName && <p className="text-xs text-slate-400 mt-0.5">{sceneName}</p>}
-      <p className="text-sm text-slate-700 mt-2 flex-1">
-        {shot.description || <span className="text-slate-400">No description</span>}
-      </p>
-      <p
-        className={
-          "text-xs mt-1 " + (shot.castNotes?.trim() ? "text-slate-400" : "text-amber-600")
-        }
-      >
-        Character: {shot.castNotes?.trim() || "Add who's in it"}
-      </p>
-      {specs.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-3">
-          {specs.map((s, i) => (
-            <span key={i} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-              {s}
-            </span>
-          ))}
-        </div>
-      )}
-      {canEdit && !selection.mode && (
-        <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-slate-100">
-          <Button size="sm" variant="ghost" onClick={onEdit}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onDelete}>
-            <Trash2 className="h-3.5 w-3.5 text-red-600" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
