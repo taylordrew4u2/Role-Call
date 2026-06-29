@@ -8,6 +8,7 @@ import { toast } from "@/components/Toaster";
 import { ScreenplayEditor } from "@/components/ScreenplayEditor";
 import { SuggestEditModal } from "@/components/SuggestEditModal";
 import { SuggestionsPanel } from "@/components/SuggestionsPanel";
+import { ScriptHighlighter } from "@/components/ScriptHighlighter";
 import type { ScriptSuggestion } from "@/lib/db/schema";
 
 type Tab = "editing" | "final";
@@ -17,34 +18,39 @@ interface EligibleWriter {
   displayName: string;
 }
 
+interface CastMember {
+  displayName: string;
+  character: string | null;
+}
+
 export function ScriptWorkspace({
   projectId,
   isOwner,
   isWriter,
-  canViewEditing,
+  canViewEditing = true,
   ownerId,
   writerId,
   eligibleWriters,
+  cast = [],
   initialContent,
   initialFinalContent,
   initialFileUrl,
   initialFileName,
   initialSuggestions,
-  canViewEditing = true,
 }: {
   projectId: number;
   isOwner: boolean;
   isWriter: boolean;
-  canViewEditing: boolean;
+  canViewEditing?: boolean;
   ownerId: string;
   writerId: string;
   eligibleWriters: EligibleWriter[];
+  cast?: CastMember[];
   initialContent: string;
   initialFinalContent: string;
   initialFileUrl: string | null;
   initialFileName: string | null;
   initialSuggestions: ScriptSuggestion[];
-  canViewEditing?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("editing");
   const [content, setContent] = useState(initialContent);
@@ -116,6 +122,7 @@ export function ScriptWorkspace({
 
   const pendingCount = suggestions.filter((s) => s.status === "pending").length;
 
+  // Non-editors (cast, plain crew) only see the final script with character highlighting.
   if (!canViewEditing) {
     return (
       <div className="space-y-5">
@@ -123,11 +130,9 @@ export function ScriptWorkspace({
           <FileText className="h-5 w-5 text-slate-400" />
           <h2 className="text-lg font-semibold text-slate-900">Script</h2>
         </div>
-        <FinalScript
-          finalContent={finalContent}
-          isWriter={false}
-          publishing={false}
-          onPublish={() => {}}
+        <ScriptHighlighter
+          content={finalContent || content}
+          cast={cast}
         />
       </div>
     );
@@ -141,8 +146,8 @@ export function ScriptWorkspace({
           <h2 className="text-lg font-semibold text-slate-900">Script</h2>
         </div>
 
-        {/* Writer indicator / appointment — only visible to editors */}
-        {canViewEditing && <div className="flex items-center gap-2 text-sm">
+        {/* Writer indicator / appointment */}
+        <div className="flex items-center gap-2 text-sm">
           <Crown className="h-4 w-4 text-amber-500" />
           <span className="text-slate-500">Writer:</span>
           {isOwner ? (
@@ -166,110 +171,100 @@ export function ScriptWorkspace({
               {isWriter ? "You" : writerName}
             </span>
           )}
-        </div>}
+        </div>
       </div>
 
-      {canViewEditing ? (
-        <>
-          {/* Tabs */}
-          <div className="flex items-center gap-1 border-b border-slate-200">
-            <TabButton
-              active={tab === "editing"}
-              onClick={() => setTab("editing")}
-              icon={PenLine}
-              label="Editing Script"
-            />
-            <TabButton
-              active={tab === "final"}
-              onClick={() => setTab("final")}
-              icon={FileCheck2}
-              label="Final Script"
-            />
-          </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200">
+        <TabButton
+          active={tab === "editing"}
+          onClick={() => setTab("editing")}
+          icon={PenLine}
+          label="Editing Script"
+        />
+        <TabButton
+          active={tab === "final"}
+          onClick={() => setTab("final")}
+          icon={FileCheck2}
+          label="Final Script"
+        />
+      </div>
 
-          {tab === "editing" ? (
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
-              <ScreenplayEditor
-                projectId={projectId}
-                canEdit={isWriter}
-                content={content}
-                onContentChange={setContent}
-                onSuggest={openSuggest}
-                fileUrl={fileUrl}
-                fileName={fileName}
-                onFileChange={(url, name) => {
-                  setFileUrl(url);
-                  setFileName(name);
-                }}
-              />
-              <div className="space-y-3">
-                {isWriter && (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                    You’re the script writer. Edits save automatically. Use
-                    <span className="font-medium"> Publish to Final </span>
-                    when you’re ready to lock a version.
-                    <Button
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={publish}
-                      disabled={publishing}
-                    >
-                      {publishing ? (
-                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                      ) : (
-                        <FileCheck2 className="h-4 w-4 mr-1.5" />
-                      )}
-                      Publish to Final
-                    </Button>
-                  </div>
-                )}
-                <SuggestionsPanel
-                  projectId={projectId}
-                  isWriter={isWriter}
-                  suggestions={suggestions}
-                  onResolved={(updated, newContent) => {
-                    setSuggestions((prev) =>
-                      prev.map((s) => (s.id === updated.id ? updated : s))
-                    );
-                    if (newContent !== null) setContent(newContent);
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <FinalScript
-              finalContent={finalContent}
-              isWriter={isWriter}
-              publishing={publishing}
-              onPublish={publish}
-            />
-          )}
-
-          <SuggestEditModal
-            key={suggestSeq}
-            open={suggestOpen}
-            onOpenChange={setSuggestOpen}
+      {tab === "editing" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+          <ScreenplayEditor
             projectId={projectId}
-            initialAnchor={suggestAnchor}
-            onCreated={(s) => {
-              setSuggestions((prev) => [s, ...prev]);
-              toast("Suggestion sent to the writer.");
+            canEdit={isWriter}
+            content={content}
+            onContentChange={setContent}
+            onSuggest={openSuggest}
+            fileUrl={fileUrl}
+            fileName={fileName}
+            onFileChange={(url, name) => {
+              setFileUrl(url);
+              setFileName(name);
             }}
           />
-
-          {tab === "editing" && !isWriter && pendingCount > 0 && (
-            <p className="text-xs text-slate-400">
-              {pendingCount} suggestion{pendingCount !== 1 ? "s" : ""} awaiting the writer’s review.
-            </p>
-          )}
-        </>
+          <div className="space-y-3">
+            {isWriter && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                You're the script writer. Edits save automatically. Use
+                <span className="font-medium"> Publish to Final </span>
+                when you're ready to lock a version.
+                <Button
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={publish}
+                  disabled={publishing}
+                >
+                  {publishing ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <FileCheck2 className="h-4 w-4 mr-1.5" />
+                  )}
+                  Publish to Final
+                </Button>
+              </div>
+            )}
+            <SuggestionsPanel
+              projectId={projectId}
+              isWriter={isWriter}
+              suggestions={suggestions}
+              onResolved={(updated, newContent) => {
+                setSuggestions((prev) =>
+                  prev.map((s) => (s.id === updated.id ? updated : s))
+                );
+                if (newContent !== null) setContent(newContent);
+              }}
+            />
+          </div>
+        </div>
       ) : (
         <FinalScript
           finalContent={finalContent}
-          isWriter={false}
-          publishing={false}
+          cast={cast}
+          isWriter={isWriter}
+          publishing={publishing}
           onPublish={publish}
         />
+      )}
+
+      <SuggestEditModal
+        key={suggestSeq}
+        open={suggestOpen}
+        onOpenChange={setSuggestOpen}
+        projectId={projectId}
+        initialAnchor={suggestAnchor}
+        onCreated={(s) => {
+          setSuggestions((prev) => [s, ...prev]);
+          toast("Suggestion sent to the writer.");
+        }}
+      />
+
+      {tab === "editing" && !isWriter && pendingCount > 0 && (
+        <p className="text-xs text-slate-400">
+          {pendingCount} suggestion{pendingCount !== 1 ? "s" : ""} awaiting the writer's review.
+        </p>
       )}
     </div>
   );
@@ -304,11 +299,13 @@ function TabButton({
 
 function FinalScript({
   finalContent,
+  cast,
   isWriter,
   publishing,
   onPublish,
 }: {
   finalContent: string;
+  cast: CastMember[];
   isWriter: boolean;
   publishing: boolean;
   onPublish: () => void;
@@ -331,18 +328,14 @@ function FinalScript({
         )}
       </div>
       {finalContent.trim() ? (
-        <pre className="w-full min-h-[58vh] rounded-md border border-slate-300 bg-white px-6 py-5 font-mono text-sm leading-relaxed text-slate-900 whitespace-pre-wrap break-words">
-          {finalContent}
-        </pre>
+        <ScriptHighlighter content={finalContent} cast={cast} />
       ) : (
         <div className="rounded-md border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
           <FileCheck2 className="h-8 w-8 text-slate-300 mx-auto" />
-          <p className="mt-2 text-sm text-slate-500">
-            Nothing published yet.
-          </p>
+          <p className="mt-2 text-sm text-slate-500">Nothing published yet.</p>
           {isWriter && (
             <p className="mt-1 text-xs text-slate-400">
-              Use “Publish current draft” to lock the editing draft as the final script.
+              Use "Publish current draft" to lock the editing draft as the final script.
             </p>
           )}
         </div>
