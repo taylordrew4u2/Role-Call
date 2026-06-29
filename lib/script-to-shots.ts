@@ -15,7 +15,8 @@ export interface GeneratedShot {
 //   "action"   — an establishing shot + one shot per action beat (default)
 //   "dialogue" — an establishing shot + one coverage shot per line of dialogue
 //   "both"     — establishing + action beats + dialogue coverage
-export type ShotMode = "action" | "dialogue" | "both";
+//   "line"     — one shot per character line: character cue + their full dialogue
+export type ShotMode = "action" | "dialogue" | "both" | "line";
 
 // Letters used to number shots within a scene: A, B, C … Z, AA, AB …
 function shotLetter(index: number): string {
@@ -165,6 +166,27 @@ function dialogueCoverage(
   return out;
 }
 
+/**
+ * One shot per dialogue line: character cue shot followed immediately by their
+ * full spoken line. Each consecutive dialogue entry becomes its own shot regardless
+ * of speaker, so a 10-line scene yields 10 shots — one per beat in the script.
+ */
+function perLineCoverage(
+  scene: ParsedScene,
+  opts: { singleCamera?: boolean } = {}
+): Omit<GeneratedShot, "shotNumber">[] {
+  return scene.dialogue.map(({ character, text }) => {
+    const c = character.replace(/\s+/g, " ").trim();
+    return {
+      description: text ? snippet(text, 200) : `${c} — dialogue`,
+      shotSize: "MS",
+      angle: "Eye-level",
+      movement: "Static",
+      castNotes: c || undefined,
+    };
+  });
+}
+
 /** Distinct speaking characters in a scene, in order of first appearance. */
 function sceneCharacters(scene: ParsedScene): string[] {
   const seen = new Set<string>();
@@ -251,6 +273,14 @@ export function buildShotsForScene(
   // 3) Proper dialogue coverage: master + OTS singles + CUs on principals.
   if (mode === "dialogue" || mode === "both") {
     for (const cov of dialogueCoverage(scene, { singleCamera: single })) {
+      if (shots.length >= max) break;
+      shots.push({ shotNumber: numFor(), ...cov, description: cov.description.slice(0, 200) });
+    }
+  }
+
+  // 4) Per-line: one shot per character dialogue entry — character + full line.
+  if (mode === "line") {
+    for (const cov of perLineCoverage(scene, { singleCamera: single })) {
       if (shots.length >= max) break;
       shots.push({ shotNumber: numFor(), ...cov, description: cov.description.slice(0, 200) });
     }
