@@ -147,7 +147,7 @@ export function ScriptWorkspace({
               {isWriter ? "You" : writerName}
             </span>
           )}
-        </div>
+        </div>}
       </div>
 
       {canViewEditing ? (
