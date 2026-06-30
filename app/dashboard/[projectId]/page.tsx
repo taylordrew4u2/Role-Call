@@ -2,7 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { projects, projectMembers, assignments } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull, or } from "drizzle-orm";
 import { getProjectRoles } from "@/lib/db/project-roles";
 import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
 import { CastBoard } from "@/components/CastBoard";
@@ -27,9 +27,10 @@ export default async function ProjectPage({ params }: { params: Params }) {
   const canEdit = await isProjectEditor(project, userId);
 
   // Ensure the owner has a projectMembers row so they can be assigned to roles.
-  // Check first to avoid a redundant write on every page load.
+  // Also claim any manually-added row that has no clerkUserId yet (e.g. added by
+  // email before the owner signed up) to avoid creating a duplicate row.
   const [existingOwnerMember] = await db
-    .select({ id: projectMembers.id })
+    .select({ id: projectMembers.id, clerkUserId: projectMembers.clerkUserId })
     .from(projectMembers)
     .where(
       and(
@@ -39,20 +40,53 @@ export default async function ProjectPage({ params }: { params: Params }) {
     );
   if (!existingOwnerMember) {
     const clerkUser = await currentUser();
+    const email = clerkUser?.primaryEmailAddress?.emailAddress ?? null;
     const displayName =
       clerkUser?.fullName ||
       clerkUser?.username ||
-      clerkUser?.primaryEmailAddress?.emailAddress ||
+      email ||
       "Owner";
-    await db.insert(projectMembers).values({
-      projectId: id,
-      clerkUserId: userId,
-      displayName,
-      kind: "crew",
-      positions: ["owner"],
-      position: "owner",
-      status: "active",
-    });
+
+    // If a manually-added crew row exists for this email, claim it rather than
+    // creating a duplicate.
+    if (email) {
+      const [emailMatch] = await db
+        .select({ id: projectMembers.id })
+        .from(projectMembers)
+        .where(
+          and(
+            eq(projectMembers.projectId, id),
+            eq(projectMembers.email, email),
+            or(isNull(projectMembers.clerkUserId), eq(projectMembers.clerkUserId, ""))
+          )
+        );
+      if (emailMatch) {
+        await db
+          .update(projectMembers)
+          .set({ clerkUserId: userId, status: "active", positions: ["owner"], position: "owner" })
+          .where(eq(projectMembers.id, emailMatch.id));
+      } else {
+        await db.insert(projectMembers).values({
+          projectId: id,
+          clerkUserId: userId,
+          displayName,
+          kind: "crew",
+          positions: ["owner"],
+          position: "owner",
+          status: "active",
+        });
+      }
+    } else {
+      await db.insert(projectMembers).values({
+        projectId: id,
+        clerkUserId: userId,
+        displayName,
+        kind: "crew",
+        positions: ["owner"],
+        position: "owner",
+        status: "active",
+      });
+    }
   }
 
   // Load all data in parallel
