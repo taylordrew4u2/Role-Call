@@ -2,26 +2,26 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Clapperboard, Film, Drama, Users2, FileText } from "lucide-react";
+import { Clapperboard, ListVideo, Star, UsersRound, PenLine } from "lucide-react";
 
 const FEATURES = [
   {
-    icon: <Film className="h-6 w-6 text-red-500" />,
+    icon: <ListVideo className="h-7 w-7 text-red-500" />,
     title: "Shot list from script",
     body: "Paste your screenplay and RoleCall generates scenes and shots — action, dialogue coverage, or both — tagged by character, with zero AI cost.",
   },
   {
-    icon: <Drama className="h-6 w-6 text-violet-500" />,
+    icon: <Star className="h-7 w-7 text-violet-500" />,
     title: "Cast from script",
     body: "One click pulls every speaking character from the script. Assign who plays each role and track whether parts are filled.",
   },
   {
-    icon: <Users2 className="h-6 w-6 text-blue-500" />,
+    icon: <UsersRound className="h-7 w-7 text-blue-500" />,
     title: "Cast & crew in one place",
     body: "Side-by-side cast and collaborator views. Invite the whole team by link — no per-seat accounts, no email required.",
   },
   {
-    icon: <FileText className="h-6 w-6 text-amber-500" />,
+    icon: <PenLine className="h-7 w-7 text-amber-500" />,
     title: "Script workspace",
     body: "Write and format your screenplay in the app, or upload a PDF. Non-writers suggest edits; the writer approves them.",
   },
