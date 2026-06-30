@@ -24,7 +24,7 @@ type CrewPosition = (typeof CREW_POSITIONS)[number];
 
 const POSITION_DESCRIPTIONS: Record<CrewPosition, string> = {
   owner: "Manage members & settings",
-  director: "Suggest script edits & manage shots",
+  director: "Suggest script edits & manage the project",
   writer: "Edit script & approve suggestions",
 };
 
@@ -393,13 +393,13 @@ export function CastBoard({
               variant="outline"
               onClick={() => setDialog({ mode: "crew", member: null })}
             >
-              <Mail className="h-4 w-4 mr-1" /> Invite Person
+              <UserPlus className="h-4 w-4 mr-1" /> Add Person
             </Button>
           )}
         </div>
         {isAdmin && (
           <p className="mb-2 text-xs text-slate-500">
-            Toggle permissions: <strong>Owner</strong> manages members, <strong>Director</strong> manages shots &amp; suggests edits, <strong>Writer</strong> edits the script &amp; approves suggestions. No permission is required.
+            Click a badge to toggle permissions. <strong>Owner</strong> — manage members. <strong>Director</strong> — suggest script edits. <strong>Writer</strong> — edit the script directly.
           </p>
         )}
         <div className="rounded-lg border border-slate-200 bg-white">
@@ -510,10 +510,10 @@ function PersonDialog({
           </DialogTitle>
           <DialogDescription>
             {casting
-              ? "Add who's playing this role. Email is optional — add it to send a join invite."
+              ? "Add who's playing this role. Email is optional — for your records."
               : isCast
-                ? "Cast member details. Email is optional — add it to send a join invite."
-                : "Project collaborator. They'll get an email join link if email is set up."}
+                ? "Cast member details. Email is optional — for your records."
+                : "Project collaborator. Share their invite link so they can join."}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">

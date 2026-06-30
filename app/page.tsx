@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Clapperboard, CheckCircle2, Users2, Zap } from "lucide-react";
+import { Clapperboard, CheckCircle2, Users2, FileText } from "lucide-react";
 
 export default async function LandingPage() {
   const { userId } = await auth();
@@ -30,7 +30,7 @@ export default async function LandingPage() {
       <section className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-1.5 text-sm text-red-700 font-medium mb-6">
           <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-          Built for short film productions
+          Built for indie &amp; student film productions
         </div>
 
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 max-w-3xl leading-tight">
@@ -39,13 +39,12 @@ export default async function LandingPage() {
           {" "}No excuses.
         </h1>
         <p className="mt-6 text-lg text-slate-500 max-w-xl">
-          RoleCall makes sure every role on your short film has an owner so
-          nothing falls through the cracks on shoot day.
+          RoleCall keeps your crew organized from pre-production to wrap — assign roles, track your cast, and write your script in one place.
         </p>
 
         <div className="mt-10 flex items-center gap-4">
           <Button size="lg" asChild>
-            <Link href="/sign-up">Create your first project →</Link>
+            <Link href="/sign-up">Start your project →</Link>
           </Button>
         </div>
       </section>
@@ -56,18 +55,18 @@ export default async function LandingPage() {
           {[
             {
               icon: <CheckCircle2 className="h-6 w-6 text-emerald-500" />,
-              title: "20 pre-loaded roles",
-              body: "From Director to Data Wrangler — every short film responsibility with full duty descriptions.",
+              title: "20 production roles",
+              body: "From Director to Data Wrangler — pre-loaded role templates with full duty descriptions for every production type.",
             },
             {
               icon: <Users2 className="h-6 w-6 text-blue-500" />,
-              title: "Invite your crew",
-              body: "Send email invites via Resend and assign roles in seconds with a searchable dropdown.",
+              title: "Cast & crew management",
+              body: "Add your cast, track who's playing each character, and invite collaborators with a shareable link.",
             },
             {
-              icon: <Zap className="h-6 w-6 text-amber-500" />,
-              title: "Lean 8-person template",
-              body: "One click to apply the proven small-crew distribution — perfect for student or indie shoots.",
+              icon: <FileText className="h-6 w-6 text-amber-500" />,
+              title: "Built-in script editor",
+              body: "Write and format your screenplay directly in the app — scene navigator, page count, and proper screenplay layout included.",
             },
           ].map((f) => (
             <div key={f.title} className="flex flex-col gap-3">
