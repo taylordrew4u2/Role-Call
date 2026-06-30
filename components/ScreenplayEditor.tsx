@@ -28,6 +28,9 @@ import {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
+const SAVE_DEBOUNCE_MS = 1000;
+const DEFAULT_LINE_HEIGHT_PX = 20;
+
 const TOOLBAR: { element: ScreenplayElement; icon: typeof User }[] = [
   { element: "scene", icon: Clapperboard },
   { element: "action", icon: AlignLeft },
@@ -118,7 +121,7 @@ export function ScreenplayEditor({
     onContentChange(next);
     setSaveState("idle");
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => save(next), 1000);
+    debounceRef.current = setTimeout(() => save(next), SAVE_DEBOUNCE_MS);
   }
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -166,7 +169,7 @@ export function ScreenplayEditor({
     ta.setSelectionRange(charOffset, charOffset);
     // Scroll to the correct line using line-height, not a length ratio
     const linesBefore = content.slice(0, charOffset).split("\n").length - 1;
-    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || DEFAULT_LINE_HEIGHT_PX;
     ta.scrollTop = Math.max(0, linesBefore * lineHeight - ta.clientHeight / 3);
   }
 
@@ -187,6 +190,7 @@ export function ScreenplayEditor({
         setUploadError(data.error ?? "Upload failed.");
         return;
       }
+      setUploadError("");
       onFileChange(data.url, data.name);
     } catch {
       setUploadError("Network error during upload.");
@@ -255,20 +259,20 @@ export function ScreenplayEditor({
             <>
               <button
                 onClick={addScene}
-                title="Insert a new scene heading"
+                aria-label="Insert a new scene heading"
                 className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                <Plus className="h-3.5 w-3.5" /> New Scene
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" /> New Scene
               </button>
-              <span className="mx-1 h-5 w-px bg-slate-200" />
+              <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden="true" />
               {TOOLBAR.map(({ element, icon: Icon }) => (
                 <button
                   key={element}
                   onClick={() => applyFormat(element)}
-                  title={`Format line as ${ELEMENT_LABELS[element]}`}
+                  aria-label={`Format as ${ELEMENT_LABELS[element]}`}
                   className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   <span className="hidden sm:inline">{ELEMENT_LABELS[element]}</span>
                 </button>
               ))}

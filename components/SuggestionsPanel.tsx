@@ -54,7 +54,7 @@ export function SuggestionsPanel({
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700">
-        <MessageSquare className="h-4 w-4" />
+        <MessageSquare className="h-4 w-4" aria-hidden="true" />
         Suggested edits
         {pending.length > 0 && (
           <Badge className="ml-1">{pending.length} pending</Badge>
@@ -98,22 +98,22 @@ export function SuggestionsPanel({
                     <button
                       onClick={() => resolve(s, "approve")}
                       disabled={busyId === s.id}
-                      title="Approve"
+                      aria-label="Approve suggestion"
                       className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
                     >
                       {busyId === s.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                       ) : (
-                        <Check className="h-4 w-4" />
+                        <Check className="h-4 w-4" aria-hidden="true" />
                       )}
                     </button>
                     <button
                       onClick={() => resolve(s, "decline")}
                       disabled={busyId === s.id}
-                      title="Decline"
+                      aria-label="Decline suggestion"
                       className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </div>
                 )}
