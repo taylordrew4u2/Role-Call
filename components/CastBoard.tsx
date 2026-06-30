@@ -243,10 +243,11 @@ export function CastBoard({
         return;
       }
       setMembers((m) => [...m, ...created]);
+      const skippedNote = data.skipped
+        ? ` (${data.skipped} already in the cast)`
+        : "";
       toast(
-        `Added ${created.length} role${created.length !== 1 ? "s" : ""} from the script.` +
-          (data.skipped ? ` ${data.skipped} already in the cast.` : "") +
-          " Add who's playing each one."
+        `Added ${created.length} role${created.length !== 1 ? "s" : ""} from the script${skippedNote}. Add who's playing each one.`
       );
     } catch {
       toast("Network error. Please try again.");
@@ -421,30 +422,29 @@ export function CastBoard({
         />
       )}
 
-      {confirmRemove && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4">
-            <h2 className="text-base font-semibold text-slate-900 mb-1">Remove member?</h2>
-            <p className="text-sm text-slate-600 mb-5">
-              <strong>{confirmRemove.displayName}</strong> will be removed from this project.
-              They can be re-invited later.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" size="sm" disabled={removing} onClick={() => setConfirmRemove(null)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={removing}
-                className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => removeMember(confirmRemove)}
-              >
-                {removing ? "Removing…" : "Remove"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={!!confirmRemove} onOpenChange={(o) => !o && !removing && setConfirmRemove(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remove member?</DialogTitle>
+            <DialogDescription>
+              <strong>{confirmRemove?.displayName}</strong> will be removed from this project. They can be re-invited later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" disabled={removing} onClick={() => setConfirmRemove(null)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={removing}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => confirmRemove && removeMember(confirmRemove)}
+            >
+              {removing ? "Removing…" : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

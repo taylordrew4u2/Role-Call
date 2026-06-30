@@ -39,14 +39,18 @@ export function DutiesModal({
           <DialogDescription>Full list of responsibilities</DialogDescription>
         </DialogHeader>
 
-        <ul className="space-y-2 max-h-96 overflow-y-auto pr-1">
-          {duties.map((duty, i) => (
-            <li key={i} className="flex gap-3 text-sm text-slate-700">
-              <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-500" />
-              <span>{duty}</span>
-            </li>
-          ))}
-        </ul>
+        {duties.length === 0 ? (
+          <p className="text-sm text-slate-400 italic py-2">No duties defined for this role yet.</p>
+        ) : (
+          <ul className="space-y-2 max-h-96 overflow-y-auto pr-1">
+            {duties.map((duty, i) => (
+              <li key={i} className="flex gap-3 text-sm text-slate-700">
+                <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-500" />
+                <span>{duty}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </DialogContent>
     </Dialog>
   );
