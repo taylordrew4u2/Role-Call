@@ -35,6 +35,7 @@ import {
   Plus,
   Trash2,
   Pencil,
+  Loader2,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -354,7 +355,11 @@ export function RoleAssignmentBoard({
               disabled={loadingTemplate}
               className="gap-1.5"
             >
-              <Zap className="h-3.5 w-3.5 text-amber-500" />
+              {loadingTemplate ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+              )}
               {loadingTemplate ? "Loading…" : "Load Lean 8-Person Template"}
             </Button>
             <Button
@@ -444,6 +449,17 @@ export function RoleAssignmentBoard({
               </TableRow>
             </TableHeader>
             <TableBody>
+              {visibleRoles.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={isOwner ? 6 : 5} className="py-10 text-center text-sm text-slate-400">
+                    {members.length === 0
+                      ? "Invite team members first, then assign them to roles."
+                      : roleList.length === 0
+                        ? "No roles yet. Add one with the button above."
+                        : "No roles match the current filter."}
+                  </TableCell>
+                </TableRow>
+              )}
               {visibleRoles
                 .sort((a, b) => a.sortOrder - b.sortOrder)
                 .map((role) => {

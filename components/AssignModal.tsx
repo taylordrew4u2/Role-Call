@@ -142,7 +142,7 @@ export function AssignModal({
         </div>
 
         {/* Member list */}
-        <div className="max-h-56 overflow-y-auto space-y-1 rounded-md border border-slate-200 p-1">
+        <div className="relative max-h-56 overflow-y-auto space-y-1 rounded-md border border-slate-200 p-1 after:pointer-events-none after:absolute after:bottom-0 after:inset-x-0 after:h-6 after:rounded-b-md after:bg-gradient-to-t after:from-white after:to-transparent">
           {filtered.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-400">
               No members found
