@@ -4,6 +4,24 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Clapperboard, CheckCircle2, Users2, FileText } from "lucide-react";
 
+const FEATURES = [
+  {
+    icon: <CheckCircle2 className="h-6 w-6 text-emerald-500" />,
+    title: "20 production roles",
+    body: "From Director to Data Wrangler — pre-loaded role templates with full duty descriptions for every production type.",
+  },
+  {
+    icon: <Users2 className="h-6 w-6 text-blue-500" />,
+    title: "Cast & crew management",
+    body: "Add your cast, track who's playing each character, and invite collaborators with a shareable link.",
+  },
+  {
+    icon: <FileText className="h-6 w-6 text-amber-500" />,
+    title: "Built-in script editor",
+    body: "Write and format your screenplay directly in the app — scene navigator, page count, and proper screenplay layout included.",
+  },
+];
+
 export default async function LandingPage() {
   const { userId } = await auth();
   if (userId) redirect("/dashboard");
@@ -52,23 +70,7 @@ export default async function LandingPage() {
       {/* Features */}
       <section className="border-t border-slate-200 bg-white px-6 py-16">
         <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
-          {[
-            {
-              icon: <CheckCircle2 className="h-6 w-6 text-emerald-500" />,
-              title: "20 production roles",
-              body: "From Director to Data Wrangler — pre-loaded role templates with full duty descriptions for every production type.",
-            },
-            {
-              icon: <Users2 className="h-6 w-6 text-blue-500" />,
-              title: "Cast & crew management",
-              body: "Add your cast, track who's playing each character, and invite collaborators with a shareable link.",
-            },
-            {
-              icon: <FileText className="h-6 w-6 text-amber-500" />,
-              title: "Built-in script editor",
-              body: "Write and format your screenplay directly in the app — scene navigator, page count, and proper screenplay layout included.",
-            },
-          ].map((f) => (
+          {FEATURES.map((f) => (
             <div key={f.title} className="flex flex-col gap-3">
               {f.icon}
               <h3 className="font-semibold text-slate-900">{f.title}</h3>
