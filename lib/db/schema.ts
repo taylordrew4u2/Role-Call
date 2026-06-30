@@ -188,6 +188,8 @@ export const shootDays = pgTable("shoot_days", {
   callTime: text("call_time"),
   wrapTime: text("wrap_time"),
   lunchTime: text("lunch_time"),
+  lat: text("lat"),
+  lng: text("lng"),
   notes: text("notes"),
   sortOrder: integer("sort_order").notNull().default(0),
 });
