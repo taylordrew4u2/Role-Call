@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { scripts, scenes, shots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { requireProjectDirector } from "@/lib/project-access";
-import { parseScenesFromScript } from "@/lib/parse-scenes";
+import { parseScenesFromScript, parseDialogueBeats } from "@/lib/parse-scenes";
 import { buildShotsForScene, type ShotMode } from "@/lib/script-to-shots";
 
 type Params = Promise<{ projectId: string }>;
@@ -41,8 +41,6 @@ export async function POST(request: Request, { params }: { params: Params }) {
     );
   }
 
-  // parseScenesFromScript always returns at least one scene for any non-empty
-  // text, so there's no "couldn't read it" path here.
   const parsed = parseScenesFromScript(content);
 
   // Regenerating replaces the previous auto-generated scenes/shots so running
@@ -51,6 +49,40 @@ export async function POST(request: Request, { params }: { params: Params }) {
   if (replace) {
     await db.delete(shots).where(eq(shots.projectId, access.id));
     await db.delete(scenes).where(eq(scenes.projectId, access.id));
+  }
+
+  // "By line" mode with no scene headings: extract dialogue beats directly and
+  // create shots without scene rows (sceneId: null). Scenes are only created
+  // when the script has explicit headings.
+  if (mode === "line" && parsed.length === 0) {
+    const beats = parseDialogueBeats(content);
+    if (beats.length === 0) {
+      return Response.json(
+        { error: "No dialogue found in the script." },
+        { status: 400 }
+      );
+    }
+
+    const existingShots = replace
+      ? []
+      : await db.select().from(shots).where(eq(shots.projectId, access.id));
+    let shotOrder = existingShots.length;
+
+    const shotRows = beats.map((beat, i) => ({
+      projectId: access.id,
+      sceneId: null,
+      shotNumber: String(i + 1),
+      description: beat.text || `${beat.character} — dialogue`,
+      shotSize: "MS",
+      angle: "Eye-level",
+      movement: "Static",
+      castNotes: beat.character || null,
+      status: "planned",
+      sortOrder: shotOrder++,
+    }));
+
+    const createdShots = await db.insert(shots).values(shotRows).returning();
+    return Response.json({ scenes: [], shots: createdShots }, { status: 201 });
   }
 
   const existingScenes = replace
@@ -69,7 +101,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
     sortOrder: sceneOrder++,
   }));
 
-  const createdScenes = await db.insert(scenes).values(sceneRows).returning();
+  const createdScenes = parsed.length
+    ? await db.insert(scenes).values(sceneRows).returning()
+    : [];
 
   // Generate an inferred shot list per scene and link it to the new scenes.
   const existingShots = replace
