@@ -9,6 +9,7 @@ import { CastBoard } from "@/components/CastBoard";
 import { Clapperboard } from "lucide-react";
 import { getProductionType } from "@/lib/production-types";
 import { isProjectAdmin, isProjectEditor } from "@/lib/project-access";
+import { Users2 } from "lucide-react";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -98,13 +99,19 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-10">
-      {/* Team members + permissions */}
-      <CastBoard
-        projectId={id}
-        isOwner={isAdmin}
-        isAdmin={isAdmin}
-        initialMembers={members}
-      />
+      {/* Team */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <Users2 className="h-5 w-5 text-slate-400" />
+          <h2 className="text-lg font-semibold text-slate-900">Team</h2>
+        </div>
+        <CastBoard
+          projectId={id}
+          isOwner={isAdmin}
+          isAdmin={isAdmin}
+          initialMembers={members}
+        />
+      </section>
 
       {/* Role assignments */}
       <section>

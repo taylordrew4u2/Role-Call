@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Drama, UserPlus, Plus, Trash2, Mail, Link as LinkIcon, Pencil, Sparkles, Loader2 } from "lucide-react";
+import { Drama, Users2, Plus, Trash2, Link as LinkIcon, Pencil, Sparkles, Loader2, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectMember } from "@/lib/db/schema";
 import { toast } from "@/components/Toaster";
@@ -84,7 +84,8 @@ function MemberRow({
   }
 
   return (
-    <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
+      {/* Identity */}
       <div className="min-w-0 flex-1">
         {unassigned ? (
           <p className="text-sm font-medium text-slate-900 truncate">
@@ -99,50 +100,50 @@ function MemberRow({
             )}
           </p>
         )}
-        <p className="text-xs text-slate-400 truncate">{member.email || "No email"}</p>
-
-        {/* Permission toggles for crew */}
-        {showPositions && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {CREW_POSITIONS.map((pos) => {
-              const active = positions.includes(pos);
-              return isAdmin ? (
-                <button
-                  key={pos}
-                  title={POSITION_DESCRIPTIONS[pos]}
-                  disabled={saving}
-                  aria-pressed={active}
-                  onClick={() => togglePosition(pos)}
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors disabled:opacity-50",
-                    active
-                      ? "bg-red-600 text-white border-red-600"
-                      : "bg-white text-slate-500 border-slate-300 hover:border-slate-500 hover:text-slate-700"
-                  )}
-                >
-                  {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                </button>
-              ) : active ? (
-                <span
-                  key={pos}
-                  className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 border border-red-200"
-                >
-                  {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                </span>
-              ) : null;
-            })}
-            {!isAdmin && positions.length === 0 && (
-              <span className="text-xs text-slate-400 italic">No permissions assigned</span>
-            )}
-          </div>
+        {member.email && (
+          <p className="text-xs text-slate-400 truncate">{member.email}</p>
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0 mt-0.5">
+      {/* Permission pills (crew only) */}
+      {showPositions && (
+        <div className="hidden sm:flex items-center gap-1 flex-wrap">
+          {CREW_POSITIONS.map((pos) => {
+            const active = positions.includes(pos);
+            return isAdmin ? (
+              <button
+                key={pos}
+                title={POSITION_DESCRIPTIONS[pos]}
+                disabled={saving}
+                aria-pressed={active}
+                onClick={() => togglePosition(pos)}
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors disabled:opacity-50",
+                  active
+                    ? "bg-red-600 text-white border-red-600"
+                    : "bg-white text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-700"
+                )}
+              >
+                {pos.charAt(0).toUpperCase() + pos.slice(1)}
+              </button>
+            ) : active ? (
+              <span
+                key={pos}
+                className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 border border-red-200"
+              >
+                {pos.charAt(0).toUpperCase() + pos.slice(1)}
+              </span>
+            ) : null;
+          })}
+        </div>
+      )}
+
+      {/* Status + actions */}
+      <div className="flex items-center gap-1.5 shrink-0">
         {unassigned ? (
           isOwner ? (
             <Button size="sm" variant="outline" onClick={() => onEdit(member)}>
-              <UserPlus className="h-3.5 w-3.5 mr-1" /> Add actor
+              <UserPlus className="h-3.5 w-3.5 mr-1" /> Cast
             </Button>
           ) : (
             <Badge variant="secondary">Needs casting</Badge>
@@ -179,7 +180,7 @@ function MemberRow({
             aria-label={`Remove ${member.displayName}`}
             onClick={() => onRemove(member)}
           >
-            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+            <Trash2 className="h-3.5 w-3.5 text-red-500" />
           </Button>
         )}
       </div>
@@ -244,9 +245,7 @@ export function CastBoard({
         return;
       }
       setMembers((m) => [...m, ...created]);
-      const skippedNote = data.skipped
-        ? ` (${data.skipped} already in the cast)`
-        : "";
+      const skippedNote = data.skipped ? ` (${data.skipped} already in the cast)` : "";
       toast(
         `Added ${created.length} role${created.length !== 1 ? "s" : ""} from the script${skippedNote}. Add who's playing each one.`
       );
@@ -332,87 +331,80 @@ export function CastBoard({
   };
 
   return (
-    <div className="space-y-8">
-      {/* Cast */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Drama className="h-5 w-5 text-slate-400" />
-            <h2 className="text-lg font-semibold text-slate-900">
-              Cast <span className="text-slate-400 font-normal">({cast.length})</span>
-            </h2>
-          </div>
+    <div className="space-y-0">
+      {/* Single unified card */}
+      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+
+        {/* ── Cast sub-section ── */}
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+          <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <Drama className="h-4 w-4 text-slate-400" aria-hidden="true" />
+            Cast
+            <span className="font-normal text-slate-400">({cast.length})</span>
+          </span>
           {isOwner && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={generateFromScript}
                 disabled={generating}
-                title="Detect characters from the script and add them as roles"
+                title="Import characters from your script"
+                className="text-slate-500 hover:text-slate-900"
               >
                 {generating ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Sparkles className="h-4 w-4 mr-1" />
+                  <Sparkles className="h-3.5 w-3.5" />
                 )}
-                Generate from script
+                <span className="hidden sm:inline ml-1">Import from script</span>
               </Button>
               <Button size="sm" onClick={() => setDialog({ mode: "cast", member: null })}>
-                <Plus className="h-4 w-4 mr-1" /> Add Actor
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add actor
               </Button>
             </div>
           )}
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white">
-          {cast.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-400">
-              No actors yet.{" "}
-              {isOwner
-                ? "Add cast manually, or use “Generate from script” to pull every character from your screenplay."
-                : ""}
-            </p>
-          ) : (
-            cast.map((m) => <MemberRow key={m.id} member={m} {...rowProps} />)
-          )}
-        </div>
-      </section>
 
-      {/* Crew */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-slate-400" />
-            <h2 className="text-lg font-semibold text-slate-900">
-              Crew{" "}
-              <span className="text-slate-400 font-normal">({crew.length})</span>
-            </h2>
-          </div>
+        {cast.length === 0 ? (
+          <p className="px-4 py-5 text-sm text-slate-400">
+            {isOwner
+              ? "No actors yet — add them manually or import from your script."
+              : "No actors added yet."}
+          </p>
+        ) : (
+          cast.map((m) => <MemberRow key={m.id} member={m} {...rowProps} />)
+        )}
+
+        {/* ── Collaborators sub-section ── */}
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-y border-slate-200">
+          <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <Users2 className="h-4 w-4 text-slate-400" aria-hidden="true" />
+            Collaborators
+            <span className="font-normal text-slate-400">({crew.length})</span>
+          </span>
           {isOwner && (
             <Button
               size="sm"
               variant="outline"
               onClick={() => setDialog({ mode: "crew", member: null })}
             >
-              <UserPlus className="h-4 w-4 mr-1" /> Add Person
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add
             </Button>
           )}
         </div>
-        {isAdmin && (
-          <p className="mb-2 text-xs text-slate-500">
-            Click a badge to toggle permissions. <strong>Owner</strong> — manage members. <strong>Director</strong> — suggest script edits. <strong>Writer</strong> — edit the script directly.
+
+        {crew.length === 0 ? (
+          <p className="px-4 py-5 text-sm text-slate-400">
+            {isOwner
+              ? "No collaborators yet — invite people to work on this project."
+              : "No collaborators added yet."}
           </p>
+        ) : (
+          crew.map((m) => <MemberRow key={m.id} member={m} showPositions {...rowProps} />)
         )}
-        <div className="rounded-lg border border-slate-200 bg-white">
-          {crew.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-400">
-              No crew yet. {isOwner ? "Invite people to collaborate on this project." : ""}
-            </p>
-          ) : (
-            crew.map((m) => <MemberRow key={m.id} member={m} showPositions {...rowProps} />)
-          )}
-        </div>
-      </section>
+
+      </div>
 
       {dialog && (
         <PersonDialog
@@ -472,7 +464,6 @@ function PersonDialog({
 
   const isCast = mode === "cast";
   const isEdit = member !== null;
-  // Editing a script-generated role that has no actor yet.
   const casting = isCast && member !== null && !member.displayName.trim();
 
   async function submit() {
@@ -483,12 +474,7 @@ function PersonDialog({
     setError("");
     setSaving(true);
     const ok = await onSave(
-      {
-        displayName,
-        character: isCast ? character : undefined,
-        email,
-        kind: mode,
-      },
+      { displayName, character: isCast ? character : undefined, email, kind: mode },
       member
     );
     setSaving(false);
@@ -499,22 +485,21 @@ function PersonDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isCast ? <Drama className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+          <DialogTitle>
             {casting
               ? `Cast ${member?.character || "this role"}`
               : isEdit
                 ? "Edit"
                 : isCast
-                  ? "Add Actor"
-                  : "Invite Person"}
+                  ? "Add actor"
+                  : "Add collaborator"}
           </DialogTitle>
           <DialogDescription>
             {casting
-              ? "Add who's playing this role. Email is optional — for your records."
+              ? "Who's playing this role? Email is optional."
               : isCast
-                ? "Cast member details. Email is optional — for your records."
-                : "Project collaborator. Share their invite link so they can join."}
+                ? "Actor details. Email is optional."
+                : "Share their invite link so they can join the project."}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -553,9 +538,7 @@ function PersonDialog({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={submit} disabled={saving || !displayName.trim()}>
             {saving
               ? "Saving…"
@@ -564,8 +547,8 @@ function PersonDialog({
                 : isEdit
                   ? "Save"
                   : isCast
-                    ? "Add Actor"
-                    : "Send Invite"}
+                    ? "Add actor"
+                    : "Add collaborator"}
           </Button>
         </DialogFooter>
       </DialogContent>
