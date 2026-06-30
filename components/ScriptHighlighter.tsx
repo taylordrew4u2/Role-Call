@@ -9,7 +9,6 @@ interface CastMember {
   character: string | null;
 }
 
-// Parenthetical extensions on a character cue line: JOHN (V.O.), etc.
 const EXTENSION_RE =
   /\s*\((?:V\.?O\.?|O\.?S\.?|O\.?C\.?|CONT'?D|CONTINUED|FILTERED|INTO PHONE|ON PHONE|OFF|VOICE|MORE)\)/gi;
 
@@ -17,44 +16,57 @@ function normalizeCue(line: string): string {
   return line.trim().replace(EXTENSION_RE, "").trim().toUpperCase();
 }
 
-// Scene heading / transition markers — these reset the current speaker.
 const HEADING_RE =
   /^\s*(?:[0-9]+[A-Za-z]?[.)]?\s*)?(?:INT|EXT|EST|INT\.?\/EXT|EXT\.?\/INT|I\/E)\.?[\s.]/i;
 const TRANSITION_RE =
-  /^(?:CUT|SMASH CUT|DISSOLVE|FADE (?:IN|OUT|TO)|WIPE|BACK TO)\b.*:?$/i;
+  /^(?:CUT|SMASH CUT|DISSOLVE|FADE (?:IN|OUT|TO)|WIPE|BACK TO|MATCH CUT)\b.*:?\s*$/i;
+
+type ElementType = "scene" | "transition" | "character" | "parenthetical" | "dialogue" | "action" | "blank";
+
+function detectElementType(raw: string, knownNames: Set<string>): ElementType {
+  if (!raw.trim()) return "blank";
+  const trimmed = raw.trim();
+  if (HEADING_RE.test(trimmed)) return "scene";
+  if (TRANSITION_RE.test(trimmed)) return "transition";
+  // Character cue: heavily indented or known speaker name
+  const norm = normalizeCue(trimmed);
+  if (knownNames.has(norm)) return "character";
+  // Parenthetical
+  if (trimmed.startsWith("(") && trimmed.endsWith(")")) return "parenthetical";
+  // Dialogue: moderately indented (8+ leading spaces) but not a character cue
+  const leadingSpaces = raw.length - raw.trimStart().length;
+  if (leadingSpaces >= 8) return "dialogue";
+  return "action";
+}
 
 interface ScriptLine {
   raw: string;
-  /** normalized character name if this line is a character cue, else null */
   speaker: string | null;
-  /** true while this line belongs to the block of the current speaker */
   inBlock: boolean;
+  elementType: ElementType;
 }
 
 function parseLines(text: string, knownNames: Set<string>): ScriptLine[] {
   const rawLines = text.split(/\r?\n/);
   const result: ScriptLine[] = [];
   let currentSpeaker: string | null = null;
-  // Track whether the previous non-blank line was a character cue so we can
-  // catch the parenthetical and dialogue lines that follow it.
   let afterCue = false;
 
   for (const raw of rawLines) {
     const trimmed = raw.trim();
 
     if (!trimmed) {
-      // Blank line resets the speaker block.
       currentSpeaker = null;
       afterCue = false;
-      result.push({ raw, speaker: null, inBlock: false });
+      result.push({ raw, speaker: null, inBlock: false, elementType: "blank" });
       continue;
     }
 
-    // Scene headings and transitions always reset speaker.
     if (HEADING_RE.test(trimmed) || TRANSITION_RE.test(trimmed)) {
       currentSpeaker = null;
       afterCue = false;
-      result.push({ raw, speaker: null, inBlock: false });
+      const elementType = HEADING_RE.test(trimmed) ? "scene" : "transition";
+      result.push({ raw, speaker: null, inBlock: false, elementType });
       continue;
     }
 
@@ -64,32 +76,29 @@ function parseLines(text: string, knownNames: Set<string>): ScriptLine[] {
     if (isCue) {
       currentSpeaker = norm;
       afterCue = true;
-      result.push({ raw, speaker: norm, inBlock: true });
+      result.push({ raw, speaker: norm, inBlock: true, elementType: "character" });
       continue;
     }
 
-    // A parenthetical "(quietly)" immediately after a cue stays in the block.
     const isParen = trimmed.startsWith("(") && trimmed.endsWith(")");
     if (currentSpeaker && (afterCue || isParen)) {
       afterCue = false;
-      result.push({ raw, speaker: null, inBlock: true });
+      result.push({ raw, speaker: null, inBlock: true, elementType: isParen ? "parenthetical" : "dialogue" });
       continue;
     }
 
-    // Any other non-blank line after a cue is dialogue.
     if (currentSpeaker) {
       afterCue = false;
-      result.push({ raw, speaker: null, inBlock: true });
+      result.push({ raw, speaker: null, inBlock: true, elementType: "dialogue" });
       continue;
     }
 
-    result.push({ raw, speaker: null, inBlock: false });
+    result.push({ raw, speaker: null, inBlock: false, elementType: detectElementType(raw, knownNames) });
   }
 
   return result;
 }
 
-// Assign a stable highlight color to each character (cycles through 8 hues).
 const HIGHLIGHT_COLORS = [
   "bg-yellow-100 border-l-4 border-yellow-400",
   "bg-sky-100 border-l-4 border-sky-400",
@@ -101,6 +110,33 @@ const HIGHLIGHT_COLORS = [
   "bg-rose-100 border-l-4 border-rose-400",
 ];
 
+function elementClass(type: ElementType): string {
+  switch (type) {
+    case "scene":
+      return "font-bold uppercase tracking-wide text-slate-900 mt-6 mb-1";
+    case "transition":
+      return "text-right uppercase text-slate-700 mt-4";
+    case "character":
+      return "text-center uppercase font-medium text-slate-900 mt-4 mb-0";
+    case "parenthetical":
+      return "text-center text-slate-600 italic";
+    case "dialogue":
+      return "mx-auto text-slate-900";
+    case "action":
+      return "text-slate-800";
+    case "blank":
+      return "h-3";
+  }
+}
+
+// For dialogue/character/parenthetical we constrain width like a real script page
+function elementStyle(type: ElementType): React.CSSProperties {
+  if (type === "dialogue" || type === "parenthetical") {
+    return { maxWidth: "360px", margin: "0 auto" };
+  }
+  return {};
+}
+
 export function ScriptHighlighter({
   content,
   cast,
@@ -110,26 +146,22 @@ export function ScriptHighlighter({
 }) {
   const [selected, setSelected] = useState<string | null>(null);
 
-  // Detect all speaking characters in the script.
   const detected = useMemo(
     () => parseCharactersFromScript(content),
     [content]
   );
 
-  // Build a set of normalized names for fast lookup during line parsing.
   const knownNames = useMemo(
     () => new Set(detected.map((c) => c.name.toUpperCase())),
     [detected]
   );
 
-  // Assign a stable color index to each character.
   const colorMap = useMemo(() => {
     const m = new Map<string, number>();
     detected.forEach((c, i) => m.set(c.name.toUpperCase(), i % HIGHLIGHT_COLORS.length));
     return m;
   }, [detected]);
 
-  // Map script character name (upper) → real cast member display name, if known.
   const realNames = useMemo(() => {
     const m = new Map<string, string>();
     for (const c of cast) {
@@ -209,39 +241,45 @@ export function ScriptHighlighter({
         </div>
       )}
 
-      {/* Script body */}
-      <div className="rounded-md border border-slate-300 bg-white font-mono text-sm leading-relaxed text-slate-900 overflow-hidden">
-        {lines.map((line, idx) => {
-          const isHighlighted =
-            selectedNorm !== null &&
-            line.inBlock &&
-            (line.speaker === selectedNorm ||
-              // dialogue/parens lines inherit from the nearest preceding cue
-              (line.speaker === null && isInSelectedBlock(lines, idx, selectedNorm)));
+      {/* Script page */}
+      <div className="rounded-lg bg-slate-300 py-6 px-4">
+        <div
+          className="bg-white shadow-md mx-auto max-w-[680px] min-h-[40vh] px-16 py-14"
+          style={{ fontFamily: "'Courier New', Courier, monospace", fontSize: "12pt", lineHeight: "1.7" }}
+        >
+          {lines.map((line, idx) => {
+            const isHighlighted =
+              selectedNorm !== null &&
+              line.inBlock &&
+              (line.speaker === selectedNorm ||
+                (line.speaker === null && isInSelectedBlock(lines, idx, selectedNorm)));
 
-          return (
-            <div
-              key={idx}
-              className={cn(
-                "px-6 whitespace-pre-wrap break-words leading-relaxed",
-                line.raw.trim() === "" ? "py-0 h-3" : "py-0",
-                isHighlighted &&
-                  cn(
+            const baseClass = elementClass(line.elementType);
+            const style = elementStyle(line.elementType);
+
+            return (
+              <div
+                key={idx}
+                className={cn(
+                  "break-words",
+                  baseClass,
+                  isHighlighted && cn(
                     HIGHLIGHT_COLORS[selectedColor],
-                    "pl-5" // compensate for the left border
+                    "pl-3"
                   )
-              )}
-            >
-              {line.raw || " "}
-            </div>
-          );
-        })}
+                )}
+                style={style}
+              >
+                {line.raw.trim() || (line.elementType === "blank" ? " " : line.raw)}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-/** Walk backwards from `idx` to find the nearest character cue; return true if it matches. */
 function isInSelectedBlock(
   lines: ScriptLine[],
   idx: number,

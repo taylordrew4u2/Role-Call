@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Upload,
@@ -15,6 +15,9 @@ import {
   ArrowRightLeft,
   Plus,
   MessageSquarePlus,
+  List,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import {
   applyElement,
@@ -33,6 +36,28 @@ const TOOLBAR: { element: ScreenplayElement; icon: typeof User }[] = [
   { element: "dialogue", icon: MessageSquare },
   { element: "transition", icon: ArrowRightLeft },
 ];
+
+const SCENE_HEADING_RE =
+  /^\s*(?:[0-9]+[A-Za-z]?[.)]?\s*)?(?:INT|EXT|EST|INT\.?\/EXT|EXT\.?\/INT|I\/E)\.?[\s.]/i;
+
+function parseScenes(content: string): { number: number; heading: string; charOffset: number }[] {
+  const scenes: { number: number; heading: string; charOffset: number }[] = [];
+  const lines = content.split("\n");
+  let offset = 0;
+  let sceneNum = 1;
+  for (const line of lines) {
+    if (SCENE_HEADING_RE.test(line)) {
+      scenes.push({ number: sceneNum++, heading: line.trim(), charOffset: offset });
+    }
+    offset += line.length + 1;
+  }
+  return scenes;
+}
+
+function estimatePages(content: string): number {
+  const lines = content.split("\n").filter((l) => l.trim()).length;
+  return Math.max(1, Math.round(lines / 55));
+}
 
 export function ScreenplayEditor({
   projectId,
@@ -56,9 +81,13 @@ export function ScreenplayEditor({
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [uploadError, setUploadError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scenes = useMemo(() => parseScenes(content), [content]);
+  const pageCount = useMemo(() => estimatePages(content), [content]);
 
   async function save(next: string) {
     setSaveState("saving");
@@ -119,6 +148,16 @@ export function ScreenplayEditor({
     onSuggest(selected);
   }
 
+  function jumpToScene(charOffset: number) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.focus();
+    ta.setSelectionRange(charOffset, charOffset);
+    // Estimate scroll position by character offset ratio
+    const ratio = charOffset / Math.max(1, content.length);
+    ta.scrollTop = ratio * ta.scrollHeight;
+  }
+
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -146,9 +185,9 @@ export function ScreenplayEditor({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Uploaded file row */}
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-sm">
             {fileUrl ? (
@@ -199,72 +238,127 @@ export function ScreenplayEditor({
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        {canEdit ? (
-          <div className="flex items-center gap-1 flex-wrap">
-            <button
-              onClick={addScene}
-              title="Insert a new scene heading"
-              className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" /> New Scene
-            </button>
-            <span className="mx-1 h-5 w-px bg-slate-200" />
-            {TOOLBAR.map(({ element, icon: Icon }) => (
+        <div className="flex items-center gap-1 flex-wrap">
+          {canEdit ? (
+            <>
               <button
-                key={element}
-                onClick={() => applyFormat(element)}
-                title={`Format line as ${ELEMENT_LABELS[element]}`}
+                onClick={addScene}
+                title="Insert a new scene heading"
                 className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                <Icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{ELEMENT_LABELS[element]}</span>
+                <Plus className="h-3.5 w-3.5" /> New Scene
               </button>
-            ))}
-          </div>
-        ) : (
-          <button
-            onClick={suggestSelection}
-            className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 transition-colors"
-          >
-            <MessageSquarePlus className="h-3.5 w-3.5" />
-            Suggest an edit
-          </button>
-        )}
+              <span className="mx-1 h-5 w-px bg-slate-200" />
+              {TOOLBAR.map(({ element, icon: Icon }) => (
+                <button
+                  key={element}
+                  onClick={() => applyFormat(element)}
+                  title={`Format line as ${ELEMENT_LABELS[element]}`}
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{ELEMENT_LABELS[element]}</span>
+                </button>
+              ))}
+            </>
+          ) : (
+            <button
+              onClick={suggestSelection}
+              className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 transition-colors"
+            >
+              <MessageSquarePlus className="h-3.5 w-3.5" />
+              Suggest an edit
+            </button>
+          )}
+        </div>
 
-        <span className="text-xs text-slate-400 flex items-center gap-1.5">
-          {canEdit && saveState === "saving" && (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
-            </>
-          )}
-          {canEdit && saveState === "saved" && (
-            <>
-              <Check className="h-3.5 w-3.5 text-emerald-500" /> Saved
-            </>
-          )}
-          {canEdit && saveState === "error" && (
-            <span className="text-red-600">Save failed</span>
-          )}
-        </span>
+        <div className="flex items-center gap-3">
+          {/* Page / scene count */}
+          <span className="text-xs text-slate-400">
+            ~{pageCount}p · {scenes.length} scene{scenes.length !== 1 ? "s" : ""}
+          </span>
+
+          {/* Save state */}
+          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+            {canEdit && saveState === "saving" && (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+              </>
+            )}
+            {canEdit && saveState === "saved" && (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-500" /> Saved
+              </>
+            )}
+            {canEdit && saveState === "error" && (
+              <span className="text-red-600">Save failed</span>
+            )}
+          </span>
+        </div>
       </div>
 
-      {/* Editor */}
-      <textarea
-        ref={textareaRef}
-        value={content}
-        onChange={handleChange}
-        readOnly={!canEdit}
-        placeholder={
-          canEdit
-            ? "Type or paste your screenplay here… use the toolbar to format lines. It saves automatically."
-            : "No script text yet. Select any passage above and click “Suggest an edit.”"
-        }
-        className="w-full min-h-[58vh] rounded-md border border-slate-300 bg-white px-4 py-3 font-mono text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
-      />
+      {/* Scene navigator */}
+      {scenes.length > 0 && (
+        <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+          <button
+            onClick={() => setNavOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <List className="h-3.5 w-3.5" />
+              Scene Navigator ({scenes.length})
+            </span>
+            {navOpen ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+          </button>
+          {navOpen && (
+            <div className="border-t border-slate-100 max-h-48 overflow-y-auto divide-y divide-slate-50">
+              {scenes.map((scene) => (
+                <button
+                  key={scene.charOffset}
+                  onClick={() => jumpToScene(scene.charOffset)}
+                  className="w-full flex items-start gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 transition-colors"
+                >
+                  <span className="shrink-0 text-slate-400 font-mono w-5 text-right">{scene.number}</span>
+                  <span className="text-slate-700 truncate">{scene.heading}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Screenplay page */}
+      <div className="rounded-lg bg-slate-300 py-6 px-4 min-h-[70vh]">
+        <div className="bg-white shadow-md mx-auto max-w-[680px] min-h-[64vh]">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleChange}
+            readOnly={!canEdit}
+            placeholder={
+              canEdit
+                ? 'FADE IN:\n\nINT. LOCATION - DAY\n\nAction description here...\n\n                    CHARACTER NAME\n          Dialogue goes here.'
+                : 'No script text yet. Select any passage above and click "Suggest an edit."'
+            }
+            className="w-full min-h-[64vh] bg-transparent border-0 outline-none resize-none text-slate-900 placeholder:text-slate-300"
+            style={{
+              fontFamily: "'Courier New', Courier, monospace",
+              fontSize: "12pt",
+              lineHeight: "1.7",
+              padding: "72px 64px",
+            }}
+          />
+        </div>
+      </div>
+
       {!canEdit && (
         <p className="text-xs text-slate-500">
-          You can’t edit the script directly. Select the text you want changed and
-          click <span className="font-medium">“Suggest an edit”</span> — the writer
+          You can&apos;t edit the script directly. Select the text you want changed and
+          click <span className="font-medium">&ldquo;Suggest an edit&rdquo;</span> — the writer
           will review it.
         </p>
       )}
