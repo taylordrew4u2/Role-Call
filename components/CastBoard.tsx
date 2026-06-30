@@ -18,9 +18,9 @@ import { Drama, Users2, Plus, Trash2, Link as LinkIcon, Pencil, Sparkles, Loader
 import { cn } from "@/lib/utils";
 import type { ProjectMember } from "@/lib/db/schema";
 import { toast } from "@/components/Toaster";
+import { memberEffectivePositions, type CrewPosition } from "@/lib/member-positions";
 
 const CREW_POSITIONS = ["owner", "director", "writer"] as const;
-type CrewPosition = (typeof CREW_POSITIONS)[number];
 
 const POSITION_DESCRIPTIONS: Record<CrewPosition, string> = {
   owner: "Manage members & settings",
@@ -54,7 +54,7 @@ function MemberRow({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const unassigned = member.kind === "cast" && !member.displayName.trim();
-  const positions = memberPositions(member);
+  const positions = memberEffectivePositions(member);
 
   async function togglePosition(pos: CrewPosition) {
     if (saving) return;
@@ -188,16 +188,6 @@ function MemberRow({
   );
 }
 
-function memberPositions(member: ProjectMember): CrewPosition[] {
-  const arr = (member.positions as string[] | null) ?? [];
-  const valid = arr.filter((p): p is CrewPosition =>
-    (CREW_POSITIONS as readonly string[]).includes(p)
-  );
-  if (valid.length) return valid;
-  if (member.position && (CREW_POSITIONS as readonly string[]).includes(member.position))
-    return [member.position as CrewPosition];
-  return [];
-}
 
 export function CastBoard({
   projectId,

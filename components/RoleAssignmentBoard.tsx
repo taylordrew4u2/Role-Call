@@ -119,48 +119,42 @@ export function RoleAssignmentBoard({
   }>({ open: false, role: null });
   const [inviteOpen, setInviteOpen] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
-  const [addRoleOpen, setAddRoleOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [newRoleName, setNewRoleName] = useState("");
-  const [newRoleCategory, setNewRoleCategory] = useState("");
-  const [newRoleCritical, setNewRoleCritical] = useState(false);
-  const [savingRole, setSavingRole] = useState(false);
+  const [roleForm, setRoleForm] = useState<{
+    open: boolean;
+    editing: Role | null;
+    name: string;
+    category: string;
+    isCritical: boolean;
+    saving: boolean;
+  }>({ open: false, editing: null, name: "", category: "", isCritical: false, saving: false });
   const [confirmRemoveRole, setConfirmRemoveRole] = useState<Role | null>(null);
   const [confirmTemplate, setConfirmTemplate] = useState(false);
 
   function openAddRole() {
-    setEditingRole(null);
-    setNewRoleName("");
-    setNewRoleCategory("");
-    setNewRoleCritical(false);
-    setAddRoleOpen(true);
+    setRoleForm({ open: true, editing: null, name: "", category: "", isCritical: false, saving: false });
   }
 
   function openEditRole(role: Role) {
-    setEditingRole(role);
-    setNewRoleName(role.name);
-    setNewRoleCategory(role.category);
-    setNewRoleCritical(role.isCritical);
-    setAddRoleOpen(true);
+    setRoleForm({ open: true, editing: role, name: role.name, category: role.category, isCritical: role.isCritical, saving: false });
   }
 
   async function handleSaveRole() {
-    if (!newRoleName.trim()) return;
-    setSavingRole(true);
+    if (!roleForm.name.trim()) return;
+    setRoleForm((f) => ({ ...f, saving: true }));
     try {
       const body = JSON.stringify({
-        name: newRoleName,
-        category: newRoleCategory,
-        isCritical: newRoleCritical,
+        name: roleForm.name,
+        category: roleForm.category,
+        isCritical: roleForm.isCritical,
       });
-      if (editingRole) {
+      if (roleForm.editing) {
         const res = await fetch(
-          `/api/projects/${projectId}/roles/${editingRole.id}`,
+          `/api/projects/${projectId}/roles/${roleForm.editing.id}`,
           { method: "PATCH", headers: { "Content-Type": "application/json" }, body }
         );
         if (res.ok) {
           const updated = await res.json();
-          const oldId = updated.replacedRoleId ?? editingRole.id;
+          const oldId = updated.replacedRoleId ?? roleForm.editing.id;
           setRoleList((rs) =>
             rs.map((r) =>
               r.id === oldId ? { ...updated, duties: updated.duties ?? [] } : r
@@ -173,7 +167,7 @@ export function RoleAssignmentBoard({
               )
             );
           }
-          setAddRoleOpen(false);
+          setRoleForm((f) => ({ ...f, open: false }));
         }
       } else {
         const res = await fetch(`/api/projects/${projectId}/roles`, {
@@ -184,11 +178,11 @@ export function RoleAssignmentBoard({
         if (res.ok) {
           const created = await res.json();
           setRoleList((rs) => [...rs, { ...created, duties: created.duties ?? [] }]);
-          setAddRoleOpen(false);
+          setRoleForm((f) => ({ ...f, open: false }));
         }
       }
     } finally {
-      setSavingRole(false);
+      setRoleForm((f) => ({ ...f, saving: false }));
     }
   }
 
@@ -392,16 +386,16 @@ export function RoleAssignmentBoard({
         )}
       </div>
 
-      {/* Add role dialog */}
-      <Dialog open={addRoleOpen} onOpenChange={setAddRoleOpen}>
+      {/* Add / edit role dialog */}
+      <Dialog open={roleForm.open} onOpenChange={(o) => !o && setRoleForm((f) => ({ ...f, open: false }))}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {editingRole ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-              {editingRole ? "Edit Role" : "Add a Role"}
+              {roleForm.editing ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              {roleForm.editing ? "Edit Role" : "Add a Role"}
             </DialogTitle>
             <DialogDescription>
-              {editingRole
+              {roleForm.editing
                 ? "Changes apply to this project only."
                 : "Add a custom role to this project. It won't affect your other projects."}
             </DialogDescription>
@@ -412,8 +406,8 @@ export function RoleAssignmentBoard({
               <Input
                 id="role-name"
                 placeholder="e.g. Drone Operator"
-                value={newRoleName}
-                onChange={(e) => setNewRoleName(e.target.value)}
+                value={roleForm.name}
+                onChange={(e) => setRoleForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
@@ -421,25 +415,25 @@ export function RoleAssignmentBoard({
               <Input
                 id="role-cat"
                 placeholder="e.g. Camera"
-                value={newRoleCategory}
-                onChange={(e) => setNewRoleCategory(e.target.value)}
+                value={roleForm.category}
+                onChange={(e) => setRoleForm((f) => ({ ...f, category: e.target.value }))}
               />
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
-                checked={newRoleCritical}
-                onChange={(e) => setNewRoleCritical(e.target.checked)}
+                checked={roleForm.isCritical}
+                onChange={(e) => setRoleForm((f) => ({ ...f, isCritical: e.target.checked }))}
               />
               Mark as a critical role
             </label>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddRoleOpen(false)}>
+            <Button variant="outline" onClick={() => setRoleForm((f) => ({ ...f, open: false }))}>
               Cancel
             </Button>
-            <Button onClick={handleSaveRole} disabled={savingRole || !newRoleName.trim()}>
-              {savingRole ? "Saving…" : editingRole ? "Save" : "Add Role"}
+            <Button onClick={handleSaveRole} disabled={roleForm.saving || !roleForm.name.trim()}>
+              {roleForm.saving ? "Saving…" : roleForm.editing ? "Save" : "Add Role"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -447,6 +441,7 @@ export function RoleAssignmentBoard({
 
       {/* Role table */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
@@ -603,6 +598,7 @@ export function RoleAssignmentBoard({
                 })}
             </TableBody>
           </Table>
+        </div>
       </div>
 
       {/* Modals */}
