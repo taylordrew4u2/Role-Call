@@ -2,23 +2,28 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Clapperboard, CheckCircle2, Users2, FileText } from "lucide-react";
+import { Clapperboard, Film, Drama, Users2, FileText } from "lucide-react";
 
 const FEATURES = [
   {
-    icon: <CheckCircle2 className="h-6 w-6 text-emerald-500" />,
-    title: "20 production roles",
-    body: "From Director to Data Wrangler — pre-loaded role templates with full duty descriptions for every production type.",
+    icon: <Film className="h-6 w-6 text-red-500" />,
+    title: "Shot list from script",
+    body: "Paste your screenplay and RoleCall generates scenes and shots — action, dialogue coverage, or both — tagged by character, with zero AI cost.",
+  },
+  {
+    icon: <Drama className="h-6 w-6 text-violet-500" />,
+    title: "Cast from script",
+    body: "One click pulls every speaking character from the script. Assign who plays each role and track whether parts are filled.",
   },
   {
     icon: <Users2 className="h-6 w-6 text-blue-500" />,
-    title: "Cast & crew management",
-    body: "Add your cast, track who's playing each character, and invite collaborators with a shareable link.",
+    title: "Cast & crew in one place",
+    body: "Side-by-side cast and collaborator views. Invite the whole team by link — no per-seat accounts, no email required.",
   },
   {
     icon: <FileText className="h-6 w-6 text-amber-500" />,
-    title: "Built-in script editor",
-    body: "Write and format your screenplay directly in the app — scene navigator, page count, and proper screenplay layout included.",
+    title: "Script workspace",
+    body: "Write and format your screenplay in the app, or upload a PDF. Non-writers suggest edits; the writer approves them.",
   },
 ];
 
@@ -57,7 +62,7 @@ export default async function LandingPage() {
           {" "}No excuses.
         </h1>
         <p className="mt-6 text-lg text-slate-500 max-w-xl">
-          RoleCall keeps your crew organized from pre-production to wrap — assign roles, track your cast, and write your script in one place.
+          Paste a screenplay and RoleCall extracts the cast, builds a shot list, and assigns your whole crew — all from one link, no accounts needed.
         </p>
 
         <div className="mt-10 flex items-center gap-4">
@@ -69,7 +74,7 @@ export default async function LandingPage() {
 
       {/* Features */}
       <section className="border-t border-slate-200 bg-white px-6 py-16">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {FEATURES.map((f) => (
             <div key={f.title} className="flex flex-col gap-3">
               {f.icon}

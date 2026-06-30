@@ -96,6 +96,9 @@ parsing.
 - **🎟️ Smart invites** — name-only invites with a copyable link (no account or
   email required); invite **as Writer or Director**, where a Director gets
   **full owner-level powers**.
+- **👥 Side-by-side team view** — Cast and Collaborators displayed in parallel
+  columns; permission pills inline. Only crew (not actors) appear in the Role
+  Assignment board — cast is its own role type.
 - **🎬 Roles & crew** — onboarding wizard, Role Assignment Board with
   critical-role warnings, one-click **lean 8-person template**.
 - **🎞️ Series** — one team across many projects, via automatic fan-out.
@@ -180,6 +183,10 @@ I designed and built **RoleCall end to end** — data model, API, and UI.
 - **Trust boundaries.** A single `requireProjectManager` guard (owner _or_
   director) backs every mutating endpoint, and **Series** membership fans out
   into per-project rows so every existing feature works unchanged.
+- **Accessibility first.** Every interactive element carries `aria-label` or
+  `aria-pressed`; destructive actions use Radix `Dialog` modals instead of
+  browser `confirm()`/`prompt()`; decorative icons are `aria-hidden`. The
+  screenplay textarea exposes `aria-readonly` to screen readers.
 
 ---
 
@@ -229,7 +236,8 @@ flowchart LR
 ```
 app/            Next.js routes (dashboard, project tabs, API route handlers)
 components/     UI — ShotListBoard, ScriptWorkspace, RoleAssignmentBoard, …
-lib/            parsers (script→cast/scenes/shots), access guards, Drizzle schema
+lib/            parsers (script→cast/scenes/shots), access guards, Drizzle schema,
+                member-positions (shared crew-position util used across components)
 docs/           screenshots & brand assets
 ```
 
