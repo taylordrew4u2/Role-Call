@@ -13,6 +13,13 @@ interface Member {
   status: string;
   roleCount: number;
   position?: string | null;
+  positions?: string[] | null;
+}
+
+function effectivePositions(m: Member): string[] {
+  const arr = (m.positions as string[] | null) ?? [];
+  if (arr.length) return arr;
+  return m.position ? [m.position] : [];
 }
 
 interface TeamSidebarProps {
@@ -92,19 +99,22 @@ export function TeamSidebar({ members, projectId, onInvite }: TeamSidebarProps) 
                 className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-slate-900 truncate flex items-center gap-1.5 flex-wrap">
                     {m.displayName}
-                    {m.position && (
+                    {effectivePositions(m).map((pos) => (
                       <span
+                        key={pos}
                         className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize ${
-                          m.position === "writer"
+                          pos === "writer"
                             ? "bg-violet-50 text-violet-700"
+                            : pos === "owner"
+                            ? "bg-amber-50 text-amber-700"
                             : "bg-sky-50 text-sky-700"
                         }`}
                       >
-                        {m.position}
+                        {pos}
                       </span>
-                    )}
+                    ))}
                   </p>
                   <p className="text-xs text-slate-500 truncate">{m.email ?? "No email"}</p>
                 </div>

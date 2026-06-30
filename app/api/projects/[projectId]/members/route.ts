@@ -59,6 +59,7 @@ export async function POST(
       displayName: displayName.trim(),
       kind: kind === "cast" ? "cast" : "crew",
       position: normalizedPosition,
+      positions: normalizedPosition ? [normalizedPosition] : [],
       character: character?.trim() || null,
       status: "invited",
     })
