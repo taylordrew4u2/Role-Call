@@ -55,6 +55,7 @@ interface Member {
   email: string | null;
   status: string;
   position?: string | null;
+  positions?: string[] | null;
 }
 
 interface Assignment {
@@ -212,11 +213,34 @@ export function RoleAssignmentBoard({
     return members.find((m) => m.id === id) ?? null;
   }
 
-  // Members enriched with role counts for sidebar
-  const membersWithCounts = members.map((m) => ({
-    ...m,
-    roleCount: assignments.filter((a) => a.assignedMemberId === m.id).length,
-  }));
+  function memberEffectivePositions(m: Member): string[] {
+    const arr = (m.positions as string[] | null) ?? [];
+    if (arr.length) return arr;
+    return m.position ? [m.position] : [];
+  }
+
+  // For a role whose name matches a crew position (e.g. "Director", "Writer"),
+  // return the first member who holds that position — used as an implicit assignment
+  // when no explicit assignment exists.
+  function getPositionHolder(roleName: string): Member | null {
+    const key = roleName.toLowerCase();
+    if (key !== "director" && key !== "writer") return null;
+    return members.find((m) => memberEffectivePositions(m).includes(key)) ?? null;
+  }
+
+  // Members enriched with role counts for sidebar (includes position-linked roles)
+  const membersWithCounts = members.map((m) => {
+    const explicitCount = assignments.filter((a) => a.assignedMemberId === m.id).length;
+    const positions = memberEffectivePositions(m);
+    // Count roles whose name matches one of their positions and has no explicit assignment
+    const implicitCount = roleList.filter((r) => {
+      const key = r.name.toLowerCase();
+      if (!positions.includes(key)) return false;
+      const a = getAssignment(r.id);
+      return !a?.assignedMemberId;
+    }).length;
+    return { ...m, roleCount: explicitCount + implicitCount };
+  });
 
   const assignedCount = assignments.filter(
     (a) => a.assignedMemberId !== null
@@ -470,12 +494,15 @@ export function RoleAssignmentBoard({
                   const backup = getMember(
                     assignment?.backupMemberId ?? null
                   );
+                  // If no explicit assignment, check for a position-holder matching the role name
+                  const positionHolder = assigned ? null : getPositionHolder(role.name);
                   const isAssigned = !!assigned;
+                  const isLinkedViaPosition = !assigned && !!positionHolder;
 
                   return (
                     <TableRow
                       key={role.id}
-                      className={role.isCritical && !isAssigned ? "bg-red-50/30" : ""}
+                      className={role.isCritical && !isAssigned && !isLinkedViaPosition ? "bg-red-50/30" : ""}
                     >
                       {/* Role name */}
                       <TableCell className="font-medium">
@@ -501,6 +528,11 @@ export function RoleAssignmentBoard({
                           <span className="text-slate-900 font-medium text-sm">
                             {assigned.displayName}
                           </span>
+                        ) : positionHolder ? (
+                          <span className="text-slate-700 text-sm flex items-center gap-1.5">
+                            {positionHolder.displayName}
+                            <span className="text-[10px] text-slate-400 font-normal">(via position)</span>
+                          </span>
                         ) : (
                           <span className="text-slate-400 text-sm italic">
                             Unassigned
@@ -519,6 +551,11 @@ export function RoleAssignmentBoard({
                           <Badge variant="success" className="gap-1">
                             <CheckCircle2 className="h-3 w-3" />
                             Assigned
+                          </Badge>
+                        ) : isLinkedViaPosition ? (
+                          <Badge variant="outline" className="gap-1 text-slate-500">
+                            <CheckCircle2 className="h-3 w-3 text-slate-400" />
+                            Linked
                           </Badge>
                         ) : (
                           <Badge variant="secondary" className="gap-1">
