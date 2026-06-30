@@ -943,7 +943,7 @@ function SceneCard({
               <TableRow>
                 {canEdit && selection.mode && <TableHead className="w-10" />}
                 <TableHead className="w-14">#</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Line</TableHead>
                 <TableHead className="w-16">Size</TableHead>
                 <TableHead className="w-24">Angle</TableHead>
                 <TableHead className="w-24">Move</TableHead>
@@ -971,7 +971,7 @@ function SceneCard({
                     </TableCell>
                   )}
                   <TableCell className="font-medium">{shot.shotNumber || "—"}</TableCell>
-                  <TableCell className="max-w-xs">
+                  <TableCell>
                     {shot.description || <span className="text-slate-400">—</span>}
                   </TableCell>
                   <TableCell>{shot.shotSize || "—"}</TableCell>
@@ -1271,7 +1271,7 @@ function FlatShotTable({
             {canEdit && selection.mode && <TableHead className="w-10" />}
             <TableHead className="w-14">#</TableHead>
             <TableHead>Scene</TableHead>
-            <TableHead>Description</TableHead>
+            <TableHead>Line</TableHead>
             <TableHead className="w-16">Size</TableHead>
             <TableHead className="w-24">Angle</TableHead>
             <TableHead className="w-24">Move</TableHead>
