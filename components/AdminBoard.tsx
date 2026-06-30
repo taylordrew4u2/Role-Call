@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Shield, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/Toaster";
@@ -56,6 +57,7 @@ function MemberRow({
   projectId: number;
   isProjectOwner: boolean;
 }) {
+  const router = useRouter();
   const [positions, setPositions] = useState<CrewPosition[]>(
     memberPositions(member)
   );
@@ -81,6 +83,7 @@ function MemberRow({
         return;
       }
       setPositions(next);
+      router.refresh();
     } catch {
       toast("Network error. Please try again.");
     } finally {
@@ -148,16 +151,14 @@ export function AdminBoard({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 border-t border-slate-200 pt-8">
         <Shield className="h-5 w-5 text-slate-400" />
-        <h2 className="text-lg font-semibold text-slate-900">Admin Board</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Permissions</h2>
       </div>
 
       {isProjectOwner && (
         <p className="text-sm text-slate-500">
-          Toggle crew positions to control who can edit content (Writer),
-          suggest edits (Director), or manage members (Owner). Cast members are
-          always view-only.
+          Toggle crew positions to control access. <strong>Writer</strong> can edit the script and approve suggestions. <strong>Director</strong> can suggest script edits and manage shot lists. <strong>Owner</strong> can manage members. Cast members are always view-only. No role is required.
         </p>
       )}
 

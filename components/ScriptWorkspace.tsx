@@ -43,7 +43,7 @@ export function ScriptWorkspace({
   isWriter: boolean;
   canViewEditing?: boolean;
   ownerId: string;
-  writerId: string;
+  writerId: string | null;
   eligibleWriters: EligibleWriter[];
   cast?: CastMember[];
   initialContent: string;
@@ -58,7 +58,7 @@ export function ScriptWorkspace({
   const [fileUrl, setFileUrl] = useState(initialFileUrl);
   const [fileName, setFileName] = useState(initialFileName);
   const [suggestions, setSuggestions] = useState(initialSuggestions);
-  const [currentWriter, setCurrentWriter] = useState(writerId);
+  const [currentWriter, setCurrentWriter] = useState<string | null>(writerId);
 
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestAnchor, setSuggestAnchor] = useState("");
@@ -98,7 +98,7 @@ export function ScriptWorkspace({
       const res = await fetch(`/api/projects/${projectId}/script/writer`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ writerId: nextWriterId === ownerId ? null : nextWriterId }),
+        body: JSON.stringify({ writerId: nextWriterId === "" ? null : nextWriterId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -106,7 +106,7 @@ export function ScriptWorkspace({
         return;
       }
       setCurrentWriter(nextWriterId);
-      toast("Script writer updated. Reload to apply your new permissions.");
+      toast("Script writer updated.");
     } catch {
       toast("Network error. Please try again.");
     } finally {
@@ -114,11 +114,10 @@ export function ScriptWorkspace({
     }
   }
 
-  const writerName =
-    currentWriter === ownerId
-      ? "the owner"
-      : eligibleWriters.find((w) => w.clerkUserId === currentWriter)?.displayName ??
-        "the appointed writer";
+  const writerName = currentWriter === null
+    ? "unassigned"
+    : eligibleWriters.find((w) => w.clerkUserId === currentWriter)?.displayName ??
+      "the appointed writer";
 
   const pendingCount = suggestions.filter((s) => s.status === "pending").length;
 
@@ -152,19 +151,17 @@ export function ScriptWorkspace({
           <span className="text-slate-500">Writer:</span>
           {isOwner ? (
             <select
-              value={currentWriter}
+              value={currentWriter ?? ""}
               onChange={(e) => changeWriter(e.target.value)}
               disabled={savingWriter}
               className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"
             >
-              <option value={ownerId}>Owner (default)</option>
-              {eligibleWriters
-                .filter((w) => w.clerkUserId !== ownerId)
-                .map((w) => (
-                  <option key={w.clerkUserId} value={w.clerkUserId}>
-                    {w.displayName}
-                  </option>
-                ))}
+              <option value="">None</option>
+              {eligibleWriters.map((w) => (
+                <option key={w.clerkUserId} value={w.clerkUserId}>
+                  {w.displayName}
+                </option>
+              ))}
             </select>
           ) : (
             <span className="font-medium text-slate-700">

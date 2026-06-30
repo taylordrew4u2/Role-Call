@@ -12,7 +12,7 @@ import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { EditProjectButton } from "@/components/EditProjectButton";
 import { getProductionType } from "@/lib/production-types";
 import { ensureAllSchema } from "@/lib/db/ensure-all-schema";
-import { isProjectManager, isProjectAdmin } from "@/lib/project-access";
+import { isProjectManager } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -35,9 +35,7 @@ export default async function ProjectLayout({
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) redirect("/dashboard");
 
-  // Directors have the same powers as the owner.
   const canManage = await isProjectManager(project, userId);
-  const isAdmin = await isProjectAdmin(project, userId);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -101,7 +99,7 @@ export default async function ProjectLayout({
       </div>
 
       {/* Section tabs */}
-      <ProjectTabs projectId={id} isAdmin={isAdmin} />
+      <ProjectTabs projectId={id} />
 
       {children}
     </div>

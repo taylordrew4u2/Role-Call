@@ -47,9 +47,6 @@ export default async function LandingPage() {
           <Button size="lg" asChild>
             <Link href="/sign-up">Create your first project →</Link>
           </Button>
-          <Button variant="outline" size="lg" asChild>
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
         </div>
       </section>
 
