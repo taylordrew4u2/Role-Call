@@ -14,7 +14,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Drama, Users2, Plus, Trash2, Link as LinkIcon, Pencil, Sparkles, Loader2, UserPlus } from "lucide-react";
+import {
+  Drama,
+  Users2,
+  Plus,
+  Trash2,
+  Link as LinkIcon,
+  Pencil,
+  Sparkles,
+  Loader2,
+  UserPlus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectMember } from "@/lib/db/schema";
 import { toast } from "@/components/Toaster";
@@ -27,6 +37,8 @@ const POSITION_DESCRIPTIONS: Record<CrewPosition, string> = {
   director: "Suggest script edits & manage the project",
   writer: "Edit script & approve suggestions",
 };
+
+// ─── MemberRow ────────────────────────────────────────────────────────────────
 
 interface MemberRowProps {
   member: ProjectMember;
@@ -84,7 +96,7 @@ function MemberRow({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
+    <div className="flex items-start justify-between gap-2 px-4 py-3 border-b border-slate-100 last:border-0">
       {/* Identity */}
       <div className="min-w-0 flex-1">
         {unassigned ? (
@@ -103,11 +115,44 @@ function MemberRow({
         {member.email && (
           <p className="text-xs text-slate-400 truncate">{member.email}</p>
         )}
+
+        {/* Permission pills — shown below name on mobile */}
+        {showPositions && (
+          <div className="mt-1 flex flex-wrap gap-1 sm:hidden">
+            {CREW_POSITIONS.map((pos) => {
+              const active = positions.includes(pos);
+              return isAdmin ? (
+                <button
+                  key={pos}
+                  title={POSITION_DESCRIPTIONS[pos]}
+                  disabled={saving}
+                  aria-pressed={active}
+                  onClick={() => togglePosition(pos)}
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-medium border transition-colors disabled:opacity-50",
+                    active
+                      ? "bg-red-600 text-white border-red-600"
+                      : "bg-white text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-700"
+                  )}
+                >
+                  {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                </button>
+              ) : active ? (
+                <span
+                  key={pos}
+                  className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 border border-red-200"
+                >
+                  {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                </span>
+              ) : null;
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Permission pills (crew only) */}
+      {/* Permission pills — desktop, right of name */}
       {showPositions && (
-        <div className="hidden sm:flex items-center gap-1 flex-wrap">
+        <div className="hidden sm:flex items-center gap-1 flex-wrap shrink-0 pt-0.5">
           {CREW_POSITIONS.map((pos) => {
             const active = positions.includes(pos);
             return isAdmin ? (
@@ -139,7 +184,7 @@ function MemberRow({
       )}
 
       {/* Status + actions */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
         {unassigned ? (
           isOwner ? (
             <Button size="sm" variant="outline" onClick={() => onEdit(member)}>
@@ -160,7 +205,7 @@ function MemberRow({
             aria-label={`Copy invite link for ${member.displayName}`}
             onClick={() => onCopyLink(member)}
           >
-            <LinkIcon className="h-3.5 w-3.5" />
+            <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         )}
         {isOwner && !unassigned && (
@@ -170,17 +215,17 @@ function MemberRow({
             aria-label={`Edit ${member.displayName}`}
             onClick={() => onEdit(member)}
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         )}
         {isOwner && (
           <Button
             size="sm"
             variant="ghost"
-            aria-label={`Remove ${member.displayName}`}
+            aria-label={`Remove ${member.displayName || member.character || "member"}`}
             onClick={() => onRemove(member)}
           >
-            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+            <Trash2 className="h-3.5 w-3.5 text-red-500" aria-hidden="true" />
           </Button>
         )}
       </div>
@@ -188,6 +233,7 @@ function MemberRow({
   );
 }
 
+// ─── CastBoard ────────────────────────────────────────────────────────────────
 
 export function CastBoard({
   projectId,
@@ -321,79 +367,82 @@ export function CastBoard({
   };
 
   return (
-    <div className="space-y-0">
-      {/* Single unified card */}
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+    <>
+      {/* Two-column layout: Cast (wider) + Collaborators (sidebar) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
 
-        {/* ── Cast sub-section ── */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
-          <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <Drama className="h-4 w-4 text-slate-400" aria-hidden="true" />
-            Cast
-            <span className="font-normal text-slate-400">({cast.length})</span>
-          </span>
-          {isOwner && (
-            <div className="flex items-center gap-1.5">
+        {/* ── Cast column ── */}
+        <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+            <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Drama className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              Cast
+              <span className="font-normal text-slate-400">({cast.length})</span>
+            </span>
+            {isOwner && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={generateFromScript}
+                  disabled={generating}
+                  title="Import characters from your script"
+                  className="text-slate-500 hover:text-slate-900"
+                >
+                  {generating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  <span className="hidden sm:inline ml-1">Import from script</span>
+                </Button>
+                <Button size="sm" onClick={() => setDialog({ mode: "cast", member: null })}>
+                  <Plus className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> Add actor
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {cast.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-slate-400">
+              {isOwner
+                ? "No actors yet — add them manually or import from your script."
+                : "No actors added yet."}
+            </p>
+          ) : (
+            cast.map((m) => <MemberRow key={m.id} member={m} {...rowProps} />)
+          )}
+        </div>
+
+        {/* ── Collaborators column ── */}
+        <div className="rounded-lg border border-slate-200 bg-white overflow-hidden self-start">
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+            <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Users2 className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              Collaborators
+              <span className="font-normal text-slate-400">({crew.length})</span>
+            </span>
+            {isOwner && (
               <Button
                 size="sm"
-                variant="ghost"
-                onClick={generateFromScript}
-                disabled={generating}
-                title="Import characters from your script"
-                className="text-slate-500 hover:text-slate-900"
+                variant="outline"
+                onClick={() => setDialog({ mode: "crew", member: null })}
               >
-                {generating ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                <span className="hidden sm:inline ml-1">Import from script</span>
+                <Plus className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> Add
               </Button>
-              <Button size="sm" onClick={() => setDialog({ mode: "cast", member: null })}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add actor
-              </Button>
-            </div>
+            )}
+          </div>
+
+          {crew.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-slate-400">
+              {isOwner
+                ? "No collaborators yet — invite people to work on this project."
+                : "No collaborators added yet."}
+            </p>
+          ) : (
+            crew.map((m) => <MemberRow key={m.id} member={m} showPositions {...rowProps} />)
           )}
         </div>
-
-        {cast.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-slate-400">
-            {isOwner
-              ? "No actors yet — add them manually or import from your script."
-              : "No actors added yet."}
-          </p>
-        ) : (
-          cast.map((m) => <MemberRow key={m.id} member={m} {...rowProps} />)
-        )}
-
-        {/* ── Collaborators sub-section ── */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-y border-slate-200">
-          <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <Users2 className="h-4 w-4 text-slate-400" aria-hidden="true" />
-            Collaborators
-            <span className="font-normal text-slate-400">({crew.length})</span>
-          </span>
-          {isOwner && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setDialog({ mode: "crew", member: null })}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add
-            </Button>
-          )}
-        </div>
-
-        {crew.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-slate-400">
-            {isOwner
-              ? "No collaborators yet — invite people to work on this project."
-              : "No collaborators added yet."}
-          </p>
-        ) : (
-          crew.map((m) => <MemberRow key={m.id} member={m} showPositions {...rowProps} />)
-        )}
-
       </div>
 
       {dialog && (
@@ -405,16 +454,25 @@ export function CastBoard({
         />
       )}
 
-      <Dialog open={!!confirmRemove} onOpenChange={(o) => !o && !removing && setConfirmRemove(null)}>
+      <Dialog
+        open={!!confirmRemove}
+        onOpenChange={(o) => !o && !removing && setConfirmRemove(null)}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Remove member?</DialogTitle>
             <DialogDescription>
-              <strong>{confirmRemove?.displayName}</strong> will be removed from this project. They can be re-invited later.
+              <strong>{confirmRemove?.displayName}</strong> will be removed from this project.
+              They can be re-invited later.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" size="sm" disabled={removing} onClick={() => setConfirmRemove(null)}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={removing}
+              onClick={() => setConfirmRemove(null)}
+            >
               Cancel
             </Button>
             <Button
@@ -428,9 +486,11 @@ export function CastBoard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
+
+// ─── PersonDialog ─────────────────────────────────────────────────────────────
 
 function PersonDialog({
   mode,
@@ -528,7 +588,9 @@ function PersonDialog({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={submit} disabled={saving || !displayName.trim()}>
             {saving
               ? "Saving…"
