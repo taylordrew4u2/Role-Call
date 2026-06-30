@@ -11,7 +11,7 @@ export function ProjectTabs({ projectId }: { projectId: number }) {
 
   const tabs = [
     { href: base, label: "Roles", icon: Users },
-    { href: `${base}/cast`, label: "Cast", icon: Drama },
+    { href: `${base}/cast`, label: "Team", icon: Drama },
     { href: `${base}/script`, label: "Script", icon: FileText },
     { href: `${base}/shots`, label: "Shot List", icon: Clapperboard },
     { href: `${base}/breakdown`, label: "Breakdown", icon: SplitSquareHorizontal },
