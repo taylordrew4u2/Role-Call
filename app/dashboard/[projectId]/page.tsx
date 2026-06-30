@@ -1,8 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { projects, projectMembers, assignments } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getProjectRoles } from "@/lib/db/project-roles";
 import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
 import { CastBoard } from "@/components/CastBoard";
@@ -25,6 +25,35 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   const isAdmin = await isProjectAdmin(project, userId);
   const canEdit = await isProjectEditor(project, userId);
+
+  // Ensure the owner has a projectMembers row so they can be assigned to roles.
+  // Check first to avoid a redundant write on every page load.
+  const [existingOwnerMember] = await db
+    .select({ id: projectMembers.id })
+    .from(projectMembers)
+    .where(
+      and(
+        eq(projectMembers.projectId, id),
+        eq(projectMembers.clerkUserId, userId)
+      )
+    );
+  if (!existingOwnerMember) {
+    const clerkUser = await currentUser();
+    const displayName =
+      clerkUser?.fullName ||
+      clerkUser?.username ||
+      clerkUser?.primaryEmailAddress?.emailAddress ||
+      "Owner";
+    await db.insert(projectMembers).values({
+      projectId: id,
+      clerkUserId: userId,
+      displayName,
+      kind: "crew",
+      positions: ["owner"],
+      position: "owner",
+      status: "active",
+    });
+  }
 
   // Load all data in parallel
   const [members, projectAssignments, allRoles] = await Promise.all([
