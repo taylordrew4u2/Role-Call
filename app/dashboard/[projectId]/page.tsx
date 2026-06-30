@@ -129,7 +129,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
             ...r,
             duties: (r.duties as string[]) ?? [],
           }))}
-          members={members}
+          members={members.filter((m) => m.kind !== "cast")}
           assignments={projectAssignments}
           recommendedRoleNames={getProductionType(project.projectType)?.recommendedRoles}
           productionTypeLabel={getProductionType(project.projectType)?.label}
