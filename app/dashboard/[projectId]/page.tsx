@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { getProjectRoles } from "@/lib/db/project-roles";
 import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
 import { CastBoard } from "@/components/CastBoard";
-import { CheckCircle2 } from "lucide-react";
+import { Clapperboard } from "lucide-react";
 import { getProductionType } from "@/lib/production-types";
 import { isProjectAdmin, isProjectEditor } from "@/lib/project-access";
 
@@ -33,12 +33,6 @@ export default async function ProjectPage({ params }: { params: Params }) {
     getProjectRoles(id),
   ]);
 
-  // Progress stats
-  const assignedCount = projectAssignments.filter(
-    (a) => a.assignedMemberId !== null
-  ).length;
-  const totalRoles = allRoles.length;
-
   return (
     <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-10">
       {/* Team members + permissions */}
@@ -50,48 +44,27 @@ export default async function ProjectPage({ params }: { params: Params }) {
       />
 
       {/* Role assignments */}
-      <div>
-      {/* Progress summary */}
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            {assignedCount}/{totalRoles} roles assigned
-          </span>
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <Clapperboard className="h-5 w-5 text-slate-400" />
+          <h2 className="text-lg font-semibold text-slate-900">Role Assignments</h2>
         </div>
-        <div className="mt-3 max-w-sm">
-          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{
-                width: `${totalRoles > 0 ? Math.round((assignedCount / totalRoles) * 100) : 0}%`,
-              }}
-            />
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            {totalRoles > 0 ? Math.round((assignedCount / totalRoles) * 100) : 0}%
-            complete
-          </p>
-        </div>
-      </div>
 
-      <RoleAssignmentBoard
-        projectId={id}
-        ownerId={project.ownerId}
-        currentUserId={userId}
-        canManage={canEdit}
-        roles={allRoles.map((r) => ({
-          ...r,
-          duties: (r.duties as string[]) ?? [],
-        }))}
-        members={members}
-        assignments={projectAssignments}
-        recommendedRoleNames={
-          getProductionType(project.projectType)?.recommendedRoles
-        }
-        productionTypeLabel={getProductionType(project.projectType)?.label}
-      />
-      </div>
+        <RoleAssignmentBoard
+          projectId={id}
+          ownerId={project.ownerId}
+          currentUserId={userId}
+          canManage={canEdit}
+          roles={allRoles.map((r) => ({
+            ...r,
+            duties: (r.duties as string[]) ?? [],
+          }))}
+          members={members}
+          assignments={projectAssignments}
+          recommendedRoleNames={getProductionType(project.projectType)?.recommendedRoles}
+          productionTypeLabel={getProductionType(project.projectType)?.label}
+        />
+      </section>
     </main>
   );
 }
