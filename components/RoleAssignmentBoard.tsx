@@ -125,6 +125,8 @@ export function RoleAssignmentBoard({
   const [newRoleCategory, setNewRoleCategory] = useState("");
   const [newRoleCritical, setNewRoleCritical] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
+  const [confirmRemoveRole, setConfirmRemoveRole] = useState<Role | null>(null);
+  const [confirmTemplate, setConfirmTemplate] = useState(false);
 
   function openAddRole() {
     setEditingRole(null);
@@ -191,7 +193,11 @@ export function RoleAssignmentBoard({
   }
 
   async function handleRemoveRole(role: Role) {
-    if (!confirm(`Remove "${role.name}" from this project?`)) return;
+    setConfirmRemoveRole(role);
+  }
+
+  async function doRemoveRole(role: Role) {
+    setConfirmRemoveRole(null);
     const res = await fetch(`/api/projects/${projectId}/roles/${role.id}`, {
       method: "DELETE",
     });
@@ -272,13 +278,11 @@ export function RoleAssignmentBoard({
       );
       return;
     }
-    if (
-      !confirm(
-        "This will overwrite all current assignments with the Lean 8-Person Template. Continue?"
-      )
-    )
-      return;
+    setConfirmTemplate(true);
+  }
 
+  async function doLoadTemplate() {
+    setConfirmTemplate(false);
     setLoadingTemplate(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/lean-template`, {
@@ -637,6 +641,50 @@ export function RoleAssignmentBoard({
         projectId={projectId}
         onInvited={reloadMembers}
       />
+
+      {/* Remove role confirmation */}
+      <Dialog open={!!confirmRemoveRole} onOpenChange={(o) => !o && setConfirmRemoveRole(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remove role?</DialogTitle>
+            <DialogDescription>
+              <strong>{confirmRemoveRole?.name}</strong> will be removed from this project along with any existing assignments.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setConfirmRemoveRole(null)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => confirmRemoveRole && doRemoveRole(confirmRemoveRole)}
+            >
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Load template confirmation */}
+      <Dialog open={confirmTemplate} onOpenChange={(o) => !o && setConfirmTemplate(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Load template?</DialogTitle>
+            <DialogDescription>
+              This will overwrite all current assignments with the Lean 8-Person Template.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setConfirmTemplate(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={doLoadTemplate}>
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

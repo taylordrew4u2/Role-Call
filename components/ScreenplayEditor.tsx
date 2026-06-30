@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Upload,
@@ -86,6 +86,13 @@ export function ScreenplayEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const scenes = useMemo(() => parseScenes(content), [content]);
   const pageCount = useMemo(() => estimatePages(content), [content]);
@@ -344,6 +351,7 @@ export function ScreenplayEditor({
             value={content}
             onChange={handleChange}
             readOnly={!canEdit}
+            aria-readonly={!canEdit}
             placeholder={
               canEdit
                 ? 'FADE IN:\n\nINT. LOCATION - DAY\n\nAction description here...\n\n                    CHARACTER NAME\n          Dialogue goes here.'

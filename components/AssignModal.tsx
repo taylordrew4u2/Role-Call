@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Member {
   id: number;
@@ -107,7 +108,7 @@ export function AssignModal({
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
           <Input
             placeholder="Search team members…"
             className="pl-9"
@@ -156,13 +157,17 @@ export function AssignModal({
                   key={member.id}
                   onClick={() => selectMember(member.id)}
                   aria-label={`Assign ${member.displayName}`}
-                  className={`w-full flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors
-                    ${isPrimary ? "bg-slate-900 text-white" : isBackup ? "bg-slate-200 text-slate-900" : "hover:bg-slate-100 text-slate-900"}`}
+                  className={cn(
+                    "w-full flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+                    isPrimary
+                      ? "bg-slate-900 text-white"
+                      : isBackup
+                        ? "bg-slate-200 text-slate-900"
+                        : "hover:bg-slate-100 text-slate-900"
+                  )}
                 >
                   <span className="font-medium">{member.displayName}</span>
-                  <span
-                    className={`text-xs ${isPrimary ? "text-slate-300" : "text-slate-500"}`}
-                  >
+                  <span className={cn("text-xs", isPrimary ? "text-slate-300" : "text-slate-500")}>
                     {isPrimary ? "Primary" : isBackup ? "Backup" : member.email ?? ""}
                   </span>
                 </button>

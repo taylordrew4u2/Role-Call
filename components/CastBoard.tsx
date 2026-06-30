@@ -111,6 +111,7 @@ function MemberRow({
                   key={pos}
                   title={POSITION_DESCRIPTIONS[pos]}
                   disabled={saving}
+                  aria-pressed={active}
                   onClick={() => togglePosition(pos)}
                   className={cn(
                     "rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors disabled:opacity-50",
@@ -314,7 +315,7 @@ export function CastBoard({
       await navigator.clipboard.writeText(link);
       toast(`Invite link copied — send it to ${member.displayName}.`);
     } catch {
-      prompt("Copy this invite link:", link);
+      toast(`Invite link for ${member.displayName}: ${link}`);
     }
   }
 
