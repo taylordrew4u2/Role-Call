@@ -488,10 +488,6 @@ export function parseDialogueBeats(text: string): DialogueBeat[] {
     if (speaker) {
       const spoken = stripWrylies(line);
       if (spoken) beats.push({ character: speaker, text: spoken });
-    } else {
-      // Non-dialogue line resets speaker only on a blank line (handled above).
-      // A plain action line doesn't break the speaker block in standard format.
-      speaker = null;
     }
   }
 

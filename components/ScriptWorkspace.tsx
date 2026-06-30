@@ -105,7 +105,7 @@ export function ScriptWorkspace({
         toast(data.error || "Couldn't update the writer.");
         return;
       }
-      setCurrentWriter(nextWriterId);
+      setCurrentWriter(nextWriterId === "" ? null : nextWriterId);
       toast("Script writer updated.");
     } catch {
       toast("Network error. Please try again.");
