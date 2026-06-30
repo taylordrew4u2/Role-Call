@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import { AssignModal } from "@/components/AssignModal";
 import { DutiesModal } from "@/components/DutiesModal";
-import { TeamSidebar } from "@/components/TeamSidebar";
 import { InviteModal } from "@/components/InviteModal";
 import { toast } from "@/components/Toaster";
 import {
@@ -227,20 +226,6 @@ export function RoleAssignmentBoard({
     if (key !== "director" && key !== "writer") return null;
     return members.find((m) => memberEffectivePositions(m).includes(key)) ?? null;
   }
-
-  // Members enriched with role counts for sidebar (includes position-linked roles)
-  const membersWithCounts = members.map((m) => {
-    const explicitCount = assignments.filter((a) => a.assignedMemberId === m.id).length;
-    const positions = memberEffectivePositions(m);
-    // Count roles whose name matches one of their positions and has no explicit assignment
-    const implicitCount = roleList.filter((r) => {
-      const key = r.name.toLowerCase();
-      if (!positions.includes(key)) return false;
-      const a = getAssignment(r.id);
-      return !a?.assignedMemberId;
-    }).length;
-    return { ...m, roleCount: explicitCount + implicitCount };
-  });
 
   const assignedCount = assignments.filter(
     (a) => a.assignedMemberId !== null
@@ -455,10 +440,8 @@ export function RoleAssignmentBoard({
         </DialogContent>
       </Dialog>
 
-      {/* Main layout: table + sidebar */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Role table */}
-        <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* Role table */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
@@ -615,14 +598,6 @@ export function RoleAssignmentBoard({
                 })}
             </TableBody>
           </Table>
-        </div>
-
-        {/* Sidebar */}
-        <TeamSidebar
-          members={membersWithCounts}
-          projectId={projectId}
-          onInvite={() => setInviteOpen(true)}
-        />
       </div>
 
       {/* Modals */}
