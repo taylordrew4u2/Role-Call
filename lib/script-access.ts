@@ -14,9 +14,9 @@ type CollaboratorOk = {
 };
 type Err = { ok: false; response: Response };
 
-/** The appointed writer's Clerk ID, falling back to the owner. */
-export function writerIdOf(project: Project): string {
-  return project.scriptWriterId ?? project.ownerId;
+/** The appointed writer's Clerk ID, or null if none is set. */
+export function writerIdOf(project: Project): string | null {
+  return project.scriptWriterId ?? null;
 }
 
 /**
@@ -58,13 +58,14 @@ export async function getCollaboratorAccess(
     return { ok: false, response: Response.json({ error: "Forbidden" }, { status: 403 }) };
   }
 
+  const writerId = writerIdOf(project);
   return {
     ok: true,
     userId,
     id,
     project,
     isOwner,
-    isWriter: writerIdOf(project) === userId,
+    isWriter: writerId !== null && writerId === userId,
   };
 }
 

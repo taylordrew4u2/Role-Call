@@ -2,16 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, FileText, Clapperboard, CalendarDays, Drama, SplitSquareHorizontal, Shield } from "lucide-react";
+import { Users, FileText, Clapperboard, CalendarDays, Drama, SplitSquareHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function ProjectTabs({
-  projectId,
-  isAdmin,
-}: {
-  projectId: number;
-  isAdmin?: boolean;
-}) {
+export function ProjectTabs({ projectId }: { projectId: number }) {
   const pathname = usePathname();
   const base = `/dashboard/${projectId}`;
 
@@ -22,7 +16,6 @@ export function ProjectTabs({
     { href: `${base}/shots`, label: "Shot List", icon: Clapperboard },
     { href: `${base}/breakdown`, label: "Breakdown", icon: SplitSquareHorizontal },
     { href: `${base}/schedule`, label: "Schedule", icon: CalendarDays },
-    ...(isAdmin ? [{ href: `${base}/admin`, label: "Admin", icon: Shield }] : []),
   ];
 
   return (
