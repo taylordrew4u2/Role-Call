@@ -31,10 +31,10 @@ function detectElementType(raw: string, knownNames: Set<string>): ElementType {
   // Character cue: heavily indented or known speaker name
   const norm = normalizeCue(trimmed);
   if (knownNames.has(norm)) return "character";
-  // Parenthetical
-  if (trimmed.startsWith("(") && trimmed.endsWith(")")) return "parenthetical";
-  // Dialogue: moderately indented (8+ leading spaces) but not a character cue
+  // Parenthetical only when indented — standalone (beat) in action stays as action
   const leadingSpaces = raw.length - raw.trimStart().length;
+  if (leadingSpaces >= 4 && trimmed.startsWith("(") && trimmed.endsWith(")")) return "parenthetical";
+  // Dialogue: moderately indented (8+ leading spaces) but not a character cue
   if (leadingSpaces >= 8) return "dialogue";
   return "action";
 }
@@ -270,7 +270,7 @@ export function ScriptHighlighter({
                 )}
                 style={style}
               >
-                {line.raw.trim() || (line.elementType === "blank" ? " " : line.raw)}
+                {line.raw.trim() || line.raw}
               </div>
             );
           })}

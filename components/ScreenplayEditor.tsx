@@ -85,21 +85,25 @@ export function ScreenplayEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const scenes = useMemo(() => parseScenes(content), [content]);
   const pageCount = useMemo(() => estimatePages(content), [content]);
 
   async function save(next: string) {
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
     setSaveState("saving");
     try {
       const res = await fetch(`/api/projects/${projectId}/script`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: next }),
+        signal: abortRef.current.signal,
       });
       setSaveState(res.ok ? "saved" : "error");
-    } catch {
-      setSaveState("error");
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") setSaveState("error");
     }
   }
 
@@ -153,9 +157,10 @@ export function ScreenplayEditor({
     if (!ta) return;
     ta.focus();
     ta.setSelectionRange(charOffset, charOffset);
-    // Estimate scroll position by character offset ratio
-    const ratio = charOffset / Math.max(1, content.length);
-    ta.scrollTop = ratio * ta.scrollHeight;
+    // Scroll to the correct line using line-height, not a length ratio
+    const linesBefore = content.slice(0, charOffset).split("\n").length - 1;
+    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+    ta.scrollTop = Math.max(0, linesBefore * lineHeight - ta.clientHeight / 3);
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {

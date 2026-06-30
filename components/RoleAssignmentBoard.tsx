@@ -214,8 +214,8 @@ export function RoleAssignmentBoard({
 
   function memberEffectivePositions(m: Member): string[] {
     const arr = (m.positions as string[] | null) ?? [];
-    if (arr.length) return arr;
-    return m.position ? [m.position] : [];
+    const positions = arr.length ? arr : m.position ? [m.position] : [];
+    return positions.map((p) => p.toLowerCase());
   }
 
   // For a role whose name matches a crew position (e.g. "Director", "Writer"),
@@ -227,10 +227,11 @@ export function RoleAssignmentBoard({
     return members.find((m) => memberEffectivePositions(m).includes(key)) ?? null;
   }
 
+  const visibleRoleIds = new Set(visibleRoles.map((r) => r.id));
   const assignedCount = assignments.filter(
-    (a) => a.assignedMemberId !== null
+    (a) => a.assignedMemberId !== null && visibleRoleIds.has(a.roleId)
   ).length;
-  const totalRoles = roleList.length;
+  const totalRoles = visibleRoles.length;
 
   // ── Assign handler ────────────────────────────────────────────────────────
 
