@@ -28,6 +28,164 @@ const POSITION_DESCRIPTIONS: Record<CrewPosition, string> = {
   writer: "Edit script & approve suggestions",
 };
 
+interface MemberRowProps {
+  member: ProjectMember;
+  projectId: number;
+  isOwner: boolean;
+  isAdmin: boolean;
+  showPositions?: boolean;
+  onMemberUpdated: (updated: ProjectMember) => void;
+  onRemove: (member: ProjectMember) => void;
+  onEdit: (member: ProjectMember) => void;
+  onCopyLink: (member: ProjectMember) => void;
+}
+
+function MemberRow({
+  member,
+  projectId,
+  isOwner,
+  isAdmin,
+  showPositions,
+  onMemberUpdated,
+  onRemove,
+  onEdit,
+  onCopyLink,
+}: MemberRowProps) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const unassigned = member.kind === "cast" && !member.displayName.trim();
+  const positions = memberPositions(member);
+
+  async function togglePosition(pos: CrewPosition) {
+    if (saving) return;
+    const next = positions.includes(pos)
+      ? positions.filter((p) => p !== pos)
+      : [...positions, pos];
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members/${member.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positions: next }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast(d.error || "Couldn't update permissions.");
+        return;
+      }
+      const updated: ProjectMember = await res.json();
+      onMemberUpdated(updated);
+      router.refresh();
+    } catch {
+      toast("Network error. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
+      <div className="min-w-0 flex-1">
+        {unassigned ? (
+          <p className="text-sm font-medium text-slate-900 truncate">
+            {member.character || "Unnamed role"}
+            <span className="text-slate-400 font-normal"> — not cast yet</span>
+          </p>
+        ) : (
+          <p className="text-sm font-medium text-slate-900 truncate">
+            {member.displayName}
+            {member.character && (
+              <span className="text-slate-400 font-normal"> as {member.character}</span>
+            )}
+          </p>
+        )}
+        <p className="text-xs text-slate-400 truncate">{member.email || "No email"}</p>
+
+        {/* Permission toggles for crew */}
+        {showPositions && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {CREW_POSITIONS.map((pos) => {
+              const active = positions.includes(pos);
+              return isAdmin ? (
+                <button
+                  key={pos}
+                  title={POSITION_DESCRIPTIONS[pos]}
+                  disabled={saving}
+                  onClick={() => togglePosition(pos)}
+                  className={cn(
+                    "rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors disabled:opacity-50",
+                    active
+                      ? "bg-red-600 text-white border-red-600"
+                      : "bg-white text-slate-500 border-slate-300 hover:border-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                </button>
+              ) : active ? (
+                <span
+                  key={pos}
+                  className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 border border-red-200"
+                >
+                  {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                </span>
+              ) : null;
+            })}
+            {!isAdmin && positions.length === 0 && (
+              <span className="text-xs text-slate-400 italic">No permissions assigned</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0 mt-0.5">
+        {unassigned ? (
+          isOwner ? (
+            <Button size="sm" variant="outline" onClick={() => onEdit(member)}>
+              <UserPlus className="h-3.5 w-3.5 mr-1" /> Add actor
+            </Button>
+          ) : (
+            <Badge variant="secondary">Needs casting</Badge>
+          )
+        ) : (
+          <Badge variant={member.status === "active" ? "success" : "secondary"}>
+            {member.status === "active" ? "Joined" : "Invited"}
+          </Badge>
+        )}
+        {isOwner && !unassigned && (
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={`Copy invite link for ${member.displayName}`}
+            onClick={() => onCopyLink(member)}
+          >
+            <LinkIcon className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {isOwner && !unassigned && (
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={`Edit ${member.displayName}`}
+            onClick={() => onEdit(member)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {isOwner && (
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={`Remove ${member.displayName}`}
+            onClick={() => onRemove(member)}
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function memberPositions(member: ProjectMember): CrewPosition[] {
   const arr = (member.positions as string[] | null) ?? [];
   const valid = arr.filter((p): p is CrewPosition =>
@@ -50,7 +208,6 @@ export function CastBoard({
   isAdmin: boolean;
   initialMembers: ProjectMember[];
 }) {
-  const router = useRouter();
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
   const [dialog, setDialog] = useState<{
     mode: "cast" | "crew";
@@ -160,140 +317,17 @@ export function CastBoard({
     }
   }
 
-  function MemberRow({ member, showPositions }: { member: ProjectMember; showPositions?: boolean }) {
-    const [saving, setSaving] = useState(false);
-    const unassigned = member.kind === "cast" && !member.displayName.trim();
-    const positions = memberPositions(member);
-
-    async function togglePosition(pos: CrewPosition) {
-      if (saving) return;
-      const next = positions.includes(pos)
-        ? positions.filter((p) => p !== pos)
-        : [...positions, pos];
-      setSaving(true);
-      try {
-        const res = await fetch(`/api/projects/${projectId}/members/${member.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ positions: next }),
-        });
-        if (!res.ok) {
-          const d = await res.json().catch(() => ({}));
-          toast(d.error || "Couldn't update permissions.");
-          return;
-        }
-        const updated: ProjectMember = await res.json();
-        setMembers((m) => m.map((x) => (x.id === updated.id ? updated : x)));
-        router.refresh();
-      } catch {
-        toast("Network error. Please try again.");
-      } finally {
-        setSaving(false);
-      }
-    }
-
-    return (
-      <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
-        <div className="min-w-0 flex-1">
-          {unassigned ? (
-            <p className="text-sm font-medium text-slate-900 truncate">
-              {member.character || "Unnamed role"}
-              <span className="text-slate-400 font-normal"> — not cast yet</span>
-            </p>
-          ) : (
-            <p className="text-sm font-medium text-slate-900 truncate">
-              {member.displayName}
-              {member.character && (
-                <span className="text-slate-400 font-normal"> as {member.character}</span>
-              )}
-            </p>
-          )}
-          <p className="text-xs text-slate-400 truncate">{member.email || "No email"}</p>
-
-          {/* Permission toggles for crew */}
-          {showPositions && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {CREW_POSITIONS.map((pos) => {
-                const active = positions.includes(pos);
-                return isAdmin ? (
-                  <button
-                    key={pos}
-                    title={POSITION_DESCRIPTIONS[pos]}
-                    disabled={saving}
-                    onClick={() => togglePosition(pos)}
-                    className={cn(
-                      "rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors disabled:opacity-50",
-                      active
-                        ? "bg-red-600 text-white border-red-600"
-                        : "bg-white text-slate-500 border-slate-300 hover:border-slate-500 hover:text-slate-700"
-                    )}
-                  >
-                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                  </button>
-                ) : active ? (
-                  <span
-                    key={pos}
-                    className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 border border-red-200"
-                  >
-                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                  </span>
-                ) : null;
-              })}
-              {!isAdmin && positions.length === 0 && (
-                <span className="text-xs text-slate-400 italic">No permissions assigned</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0 mt-0.5">
-          {unassigned ? (
-            isOwner ? (
-              <Button size="sm" variant="outline" onClick={() => setDialog({ mode: "cast", member })}>
-                <UserPlus className="h-3.5 w-3.5 mr-1" /> Add actor
-              </Button>
-            ) : (
-              <Badge variant="secondary">Needs casting</Badge>
-            )
-          ) : (
-            <Badge variant={member.status === "active" ? "success" : "secondary"}>
-              {member.status === "active" ? "Joined" : "Invited"}
-            </Badge>
-          )}
-          {isOwner && !unassigned && (
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={`Copy invite link for ${member.displayName}`}
-              onClick={() => copyInviteLink(member)}
-            >
-              <LinkIcon className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          {isOwner && !unassigned && (
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={`Edit ${member.displayName}`}
-              onClick={() => setDialog({ mode: member.kind === "cast" ? "cast" : "crew", member })}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          {isOwner && (
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={`Remove ${member.displayName}`}
-              onClick={() => setConfirmRemove(member)}
-            >
-              <Trash2 className="h-3.5 w-3.5 text-red-600" />
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const rowProps = {
+    projectId,
+    isOwner,
+    isAdmin,
+    onMemberUpdated: (updated: ProjectMember) =>
+      setMembers((m) => m.map((x) => (x.id === updated.id ? updated : x))),
+    onRemove: setConfirmRemove,
+    onEdit: (member: ProjectMember) =>
+      setDialog({ mode: member.kind === "cast" ? "cast" : "crew", member }),
+    onCopyLink: copyInviteLink,
+  };
 
   return (
     <div className="space-y-8">
@@ -337,7 +371,7 @@ export function CastBoard({
                 : ""}
             </p>
           ) : (
-            cast.map((m) => <MemberRow key={m.id} member={m} />)
+            cast.map((m) => <MemberRow key={m.id} member={m} {...rowProps} />)
           )}
         </div>
       </section>
@@ -373,7 +407,7 @@ export function CastBoard({
               No crew yet. {isOwner ? "Invite people to collaborate on this project." : ""}
             </p>
           ) : (
-            crew.map((m) => <MemberRow key={m.id} member={m} showPositions />)
+            crew.map((m) => <MemberRow key={m.id} member={m} showPositions {...rowProps} />)
           )}
         </div>
       </section>
