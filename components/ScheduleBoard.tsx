@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarDays, Plus, Pencil, Trash2, Clock, MapPin, UtensilsCrossed, LogOut } from "lucide-react";
+import { CalendarDays, Plus, Pencil, Trash2, Clock, MapPin, UtensilsCrossed, LogOut, Users, Film, Timer } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { toast } from "@/components/Toaster";
 import type { Scene, Shot, ShootDay } from "@/lib/db/schema";
@@ -38,6 +38,7 @@ export function ScheduleBoard({
     open: false,
     day: null,
   });
+  const [deleteConfirm, setDeleteConfirm] = useState<ShootDay | null>(null);
 
   const api = `/api/projects/${projectId}`;
   const sceneLabel = (sceneId: number | null) => {
@@ -78,12 +79,12 @@ export function ScheduleBoard({
   }
 
   async function deleteDay(day: ShootDay) {
-    if (!confirm(`Delete Day ${day.dayNumber}? Its shots become unscheduled.`)) return;
     const res = await fetch(`${api}/shoot-days/${day.id}`, { method: "DELETE" });
     if (res.ok) {
       setDays((d) => d.filter((x) => x.id !== day.id));
       setShots((s) => s.map((x) => (x.shootDayId === day.id ? { ...x, shootDayId: null } : x)));
     }
+    setDeleteConfirm(null);
   }
 
   async function moveShot(shot: Shot, shootDayId: number | null) {
@@ -158,20 +159,48 @@ export function ScheduleBoard({
       <div className="grid gap-4 md:grid-cols-2">
         {days.map((day) => {
           const dayShots = shots.filter((s) => s.shootDayId === day.id);
+          const uniqueSceneCount = new Set(dayShots.map((s) => s.sceneId).filter((id) => id !== null)).size;
+          const totalMins = dayShots.length * 5;
+          const estHours = Math.floor(totalMins / 60);
+          const estMins = totalMins % 60;
+          const castMembers = Array.from(
+            new Set(
+              dayShots.flatMap((s) =>
+                s.castNotes
+                  ? s.castNotes.split(/,|&|\band\b|\/|\+/i).map((n) => n.trim()).filter(Boolean)
+                  : []
+              )
+            )
+          );
           return (
             <div key={day.id} className="rounded-lg border border-slate-200 bg-white overflow-hidden">
               {/* Call Sheet Header */}
               <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900">
-                      Day {day.dayNumber}
-                      {day.shootDate && (
-                        <span className="ml-2 font-normal text-slate-500 text-sm">
-                          {formatDate(day.shootDate)}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-slate-900">
+                        Day {day.dayNumber}
+                        {day.shootDate && (
+                          <span className="ml-2 font-normal text-slate-500 text-sm">
+                            {formatDate(day.shootDate)}
+                          </span>
+                        )}
+                      </h3>
+                      <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">
+                        {dayShots.length} shot{dayShots.length !== 1 ? "s" : ""}
+                      </span>
+                      {uniqueSceneCount > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          <Film className="h-3 w-3" />{uniqueSceneCount} scene{uniqueSceneCount !== 1 ? "s" : ""}
                         </span>
                       )}
-                    </h3>
+                      {dayShots.length > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          <Timer className="h-3 w-3" />~{estHours > 0 ? `${estHours}h ` : ""}{estMins}m
+                        </span>
+                      )}
+                    </div>
 
                     {/* Call / Lunch / Wrap times row */}
                     <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -210,6 +239,17 @@ export function ScheduleBoard({
                       </div>
                     )}
 
+                    {castMembers.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1 items-center">
+                        <Users className="h-3 w-3 text-slate-400 shrink-0" />
+                        {castMembers.map((name) => (
+                          <span key={name} className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs text-blue-800">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {day.notes && (
                       <p className="text-xs text-slate-500 mt-1.5">{day.notes}</p>
                     )}
@@ -219,7 +259,7 @@ export function ScheduleBoard({
                       <Button size="sm" variant="ghost" aria-label={`Edit Day ${day.dayNumber}`} onClick={() => setDayDialog({ open: true, day })}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" aria-label={`Delete Day ${day.dayNumber}`} onClick={() => deleteDay(day)}>
+                      <Button size="sm" variant="ghost" aria-label={`Delete Day ${day.dayNumber}`} onClick={() => setDeleteConfirm(day)}>
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     </div>
@@ -267,6 +307,21 @@ export function ScheduleBoard({
           onClose={() => setDayDialog({ open: false, day: null })}
           onSave={saveDay}
         />
+      )}
+
+      {deleteConfirm && (
+        <Dialog open onOpenChange={(o) => !o && setDeleteConfirm(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete Day {deleteConfirm.dayNumber}?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-600">Its shots become unscheduled.</p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={() => deleteDay(deleteConfirm)}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
