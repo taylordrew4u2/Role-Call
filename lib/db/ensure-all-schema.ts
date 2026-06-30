@@ -1,7 +1,8 @@
 import { ensureSeriesSchema } from "./ensure-series-schema";
 import { ensureScriptSchema } from "./ensure-script-schema";
 import { ensureCallSheetSchema } from "./ensure-call-sheet-schema";
+import { ensureLocationsSchema } from "./ensure-locations-schema";
 
-export function ensureAllSchema(): Promise<[void, void, void]> {
-  return Promise.all([ensureSeriesSchema(), ensureScriptSchema(), ensureCallSheetSchema()]);
+export function ensureAllSchema(): Promise<[void, void, void, void]> {
+  return Promise.all([ensureSeriesSchema(), ensureScriptSchema(), ensureCallSheetSchema(), ensureLocationsSchema()]);
 }
