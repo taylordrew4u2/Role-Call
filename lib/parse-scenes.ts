@@ -457,3 +457,43 @@ export function parseScenesFromScript(text: string): ParsedScene[] {
   // the caller gets an empty array and can decide what to do.
   return scenes;
 }
+
+/**
+ * Extract every dialogue beat from a script regardless of whether it has scene
+ * headings. Used by the "by line" shot-generation mode so that scripts without
+ * scene markers still produce one shot per spoken line.
+ */
+export function parseDialogueBeats(text: string): DialogueBeat[] {
+  const lines = text.split(/\r?\n/);
+  const beats: DialogueBeat[] = [];
+  let speaker: string | null = null;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      speaker = null;
+      continue;
+    }
+
+    const sp = matchSpeaker(line);
+    if (sp) {
+      speaker = sp.name;
+      if (sp.inline) {
+        const spoken = stripWrylies(sp.inline);
+        if (spoken) beats.push({ character: speaker, text: spoken });
+      }
+      continue;
+    }
+
+    if (speaker) {
+      const spoken = stripWrylies(line);
+      if (spoken) beats.push({ character: speaker, text: spoken });
+    } else {
+      // Non-dialogue line resets speaker only on a blank line (handled above).
+      // A plain action line doesn't break the speaker block in standard format.
+      speaker = null;
+    }
+  }
+
+  return beats;
+}
