@@ -383,7 +383,7 @@ export function CastBoard({
           <div className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-slate-400" />
             <h2 className="text-lg font-semibold text-slate-900">
-              Crew &amp; collaborators{" "}
+              Team{" "}
               <span className="text-slate-400 font-normal">({crew.length})</span>
             </h2>
           </div>
@@ -405,7 +405,7 @@ export function CastBoard({
         <div className="rounded-lg border border-slate-200 bg-white">
           {crew.length === 0 ? (
             <p className="px-4 py-6 text-sm text-slate-400">
-              No crew yet. {isOwner ? "Invite people to collaborate on this project." : ""}
+              No team members yet. {isOwner ? "Invite people to collaborate on this project." : ""}
             </p>
           ) : (
             crew.map((m) => <MemberRow key={m.id} member={m} showPositions {...rowProps} />)
