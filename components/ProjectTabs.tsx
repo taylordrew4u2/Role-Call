@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, FileText, Clapperboard, CalendarDays, Drama, SplitSquareHorizontal } from "lucide-react";
+import { Users, FileText, Clapperboard, CalendarDays, SplitSquareHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ProjectTabs({ projectId }: { projectId: number }) {
@@ -10,8 +10,7 @@ export function ProjectTabs({ projectId }: { projectId: number }) {
   const base = `/dashboard/${projectId}`;
 
   const tabs = [
-    { href: base, label: "Roles", icon: Users },
-    { href: `${base}/cast`, label: "Team", icon: Drama },
+    { href: base, label: "Roles & Team", icon: Users },
     { href: `${base}/script`, label: "Script", icon: FileText },
     { href: `${base}/shots`, label: "Shot List", icon: Clapperboard },
     { href: `${base}/breakdown`, label: "Breakdown", icon: SplitSquareHorizontal },

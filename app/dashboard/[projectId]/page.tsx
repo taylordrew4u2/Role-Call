@@ -5,9 +5,10 @@ import { projects, projectMembers, assignments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getProjectRoles } from "@/lib/db/project-roles";
 import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
+import { CastBoard } from "@/components/CastBoard";
 import { CheckCircle2 } from "lucide-react";
 import { getProductionType } from "@/lib/production-types";
-import { isProjectManager } from "@/lib/project-access";
+import { isProjectManager, isProjectAdmin } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -23,6 +24,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
   if (!project) redirect("/dashboard");
 
   const canManage = await isProjectManager(project, userId);
+  const isAdmin = await isProjectAdmin(project, userId);
 
   // Load all data in parallel
   const [members, projectAssignments, allRoles] = await Promise.all([
@@ -38,7 +40,17 @@ export default async function ProjectPage({ params }: { params: Params }) {
   const totalRoles = allRoles.length;
 
   return (
-    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-10">
+      {/* Team members + permissions */}
+      <CastBoard
+        projectId={id}
+        isOwner={canManage}
+        isAdmin={isAdmin}
+        initialMembers={members}
+      />
+
+      {/* Role assignments */}
+      <div>
       {/* Progress summary */}
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
@@ -79,7 +91,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
         }
         productionTypeLabel={getProductionType(project.projectType)?.label}
       />
-
+      </div>
     </main>
   );
 }
