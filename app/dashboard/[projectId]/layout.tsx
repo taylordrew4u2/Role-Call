@@ -8,6 +8,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Clapperboard, ArrowLeft, Calendar } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { ProjectTabs } from "@/components/ProjectTabs";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { EditProjectButton } from "@/components/EditProjectButton";
 import { getProductionType } from "@/lib/production-types";
@@ -101,6 +102,7 @@ export default async function ProjectLayout({
       {/* Section tabs */}
       <ProjectTabs projectId={id} />
 
+      <AutoRefresh />
       {children}
     </div>
   );

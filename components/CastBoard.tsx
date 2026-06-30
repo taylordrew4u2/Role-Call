@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -14,18 +15,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Drama, UserPlus, Plus, Trash2, Mail, Link as LinkIcon, Pencil, Sparkles, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ProjectMember } from "@/lib/db/schema";
 import { toast } from "@/components/Toaster";
+
+const CREW_POSITIONS = ["owner", "director", "writer"] as const;
+type CrewPosition = (typeof CREW_POSITIONS)[number];
+
+const POSITION_DESCRIPTIONS: Record<CrewPosition, string> = {
+  owner: "Manage members & settings",
+  director: "Suggest script edits & manage shots",
+  writer: "Edit script & approve suggestions",
+};
+
+function memberPositions(member: ProjectMember): CrewPosition[] {
+  const arr = (member.positions as string[] | null) ?? [];
+  const valid = arr.filter((p): p is CrewPosition =>
+    (CREW_POSITIONS as readonly string[]).includes(p)
+  );
+  if (valid.length) return valid;
+  if (member.position && (CREW_POSITIONS as readonly string[]).includes(member.position))
+    return [member.position as CrewPosition];
+  return [];
+}
 
 export function CastBoard({
   projectId,
   isOwner,
+  isAdmin,
   initialMembers,
 }: {
   projectId: number;
   isOwner: boolean;
+  isAdmin: boolean;
   initialMembers: ProjectMember[];
 }) {
+  const router = useRouter();
   const [members, setMembers] = useState<ProjectMember[]>(initialMembers);
   const [dialog, setDialog] = useState<{
     mode: "cast" | "crew";
@@ -125,6 +150,25 @@ export function CastBoard({
     }
   }
 
+  async function togglePosition(member: ProjectMember, pos: CrewPosition, current: CrewPosition[]) {
+    const next = current.includes(pos)
+      ? current.filter((p) => p !== pos)
+      : [...current, pos];
+    const res = await fetch(`/api/projects/${projectId}/members/${member.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ positions: next }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      toast(d.error || "Couldn't update permissions.");
+      return;
+    }
+    const updated: ProjectMember = await res.json();
+    setMembers((m) => m.map((x) => (x.id === updated.id ? updated : x)));
+    router.refresh();
+  }
+
   async function copyInviteLink(member: ProjectMember) {
     const link = `${window.location.origin}/api/invite?projectId=${projectId}&memberId=${member.id}`;
     try {
@@ -135,13 +179,13 @@ export function CastBoard({
     }
   }
 
-  function MemberRow({ member }: { member: ProjectMember }) {
-    // A cast role generated from the script has its character set but no actor
-    // assigned yet (blank displayName).
+  function MemberRow({ member, showPositions }: { member: ProjectMember; showPositions?: boolean }) {
     const unassigned = member.kind === "cast" && !member.displayName.trim();
+    const positions = memberPositions(member);
+
     return (
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
+        <div className="min-w-0 flex-1">
           {unassigned ? (
             <p className="text-sm font-medium text-slate-900 truncate">
               {member.character || "Unnamed role"}
@@ -151,25 +195,51 @@ export function CastBoard({
             <p className="text-sm font-medium text-slate-900 truncate">
               {member.displayName}
               {member.character && (
-                <span className="text-slate-400 font-normal">
-                  {" "}
-                  as {member.character}
-                </span>
+                <span className="text-slate-400 font-normal"> as {member.character}</span>
               )}
             </p>
           )}
-          <p className="text-xs text-slate-400 truncate">
-            {member.email || "No email"}
-          </p>
+          <p className="text-xs text-slate-400 truncate">{member.email || "No email"}</p>
+
+          {/* Permission toggles for crew */}
+          {showPositions && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {CREW_POSITIONS.map((pos) => {
+                const active = positions.includes(pos);
+                return isAdmin ? (
+                  <button
+                    key={pos}
+                    title={POSITION_DESCRIPTIONS[pos]}
+                    onClick={() => togglePosition(member, pos, positions)}
+                    className={cn(
+                      "rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors",
+                      active
+                        ? "bg-red-600 text-white border-red-600"
+                        : "bg-white text-slate-500 border-slate-300 hover:border-slate-500 hover:text-slate-700"
+                    )}
+                  >
+                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                  </button>
+                ) : active ? (
+                  <span
+                    key={pos}
+                    className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 border border-red-200"
+                  >
+                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                  </span>
+                ) : null;
+              })}
+              {!isAdmin && positions.length === 0 && (
+                <span className="text-xs text-slate-400 italic">No permissions assigned</span>
+              )}
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+
+        <div className="flex items-center gap-2 shrink-0 mt-0.5">
           {unassigned ? (
             isOwner ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setDialog({ mode: "cast", member })}
-              >
+              <Button size="sm" variant="outline" onClick={() => setDialog({ mode: "cast", member })}>
                 <UserPlus className="h-3.5 w-3.5 mr-1" /> Add actor
               </Button>
             ) : (
@@ -195,9 +265,7 @@ export function CastBoard({
               size="sm"
               variant="ghost"
               aria-label={`Edit ${member.displayName}`}
-              onClick={() =>
-                setDialog({ mode: member.kind === "cast" ? "cast" : "crew", member })
-              }
+              onClick={() => setDialog({ mode: member.kind === "cast" ? "cast" : "crew", member })}
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -284,13 +352,18 @@ export function CastBoard({
             </Button>
           )}
         </div>
+        {isAdmin && (
+          <p className="mb-2 text-xs text-slate-500">
+            Toggle permissions: <strong>Owner</strong> manages members, <strong>Director</strong> manages shots &amp; suggests edits, <strong>Writer</strong> edits the script &amp; approves suggestions. No permission is required.
+          </p>
+        )}
         <div className="rounded-lg border border-slate-200 bg-white">
           {crew.length === 0 ? (
             <p className="px-4 py-6 text-sm text-slate-400">
               No crew yet. {isOwner ? "Invite people to collaborate on this project." : ""}
             </p>
           ) : (
-            crew.map((m) => <MemberRow key={m.id} member={m} />)
+            crew.map((m) => <MemberRow key={m.id} member={m} showPositions />)
           )}
         </div>
       </section>

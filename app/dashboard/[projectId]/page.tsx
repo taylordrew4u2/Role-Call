@@ -5,10 +5,9 @@ import { projects, projectMembers, assignments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getProjectRoles } from "@/lib/db/project-roles";
 import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
-import { AdminBoard } from "@/components/AdminBoard";
 import { CheckCircle2 } from "lucide-react";
 import { getProductionType } from "@/lib/production-types";
-import { isProjectManager, isProjectAdmin } from "@/lib/project-access";
+import { isProjectManager } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -24,7 +23,6 @@ export default async function ProjectPage({ params }: { params: Params }) {
   if (!project) redirect("/dashboard");
 
   const canManage = await isProjectManager(project, userId);
-  const isAdmin = await isProjectAdmin(project, userId);
 
   // Load all data in parallel
   const [members, projectAssignments, allRoles] = await Promise.all([
@@ -82,13 +80,6 @@ export default async function ProjectPage({ params }: { params: Params }) {
         productionTypeLabel={getProductionType(project.projectType)?.label}
       />
 
-      {isAdmin && (
-        <AdminBoard
-          projectId={id}
-          members={members}
-          isProjectOwner={isAdmin}
-        />
-      )}
     </main>
   );
 }
