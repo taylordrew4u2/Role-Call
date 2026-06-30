@@ -150,25 +150,6 @@ export function CastBoard({
     }
   }
 
-  async function togglePosition(member: ProjectMember, pos: CrewPosition, current: CrewPosition[]) {
-    const next = current.includes(pos)
-      ? current.filter((p) => p !== pos)
-      : [...current, pos];
-    const res = await fetch(`/api/projects/${projectId}/members/${member.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ positions: next }),
-    });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      toast(d.error || "Couldn't update permissions.");
-      return;
-    }
-    const updated: ProjectMember = await res.json();
-    setMembers((m) => m.map((x) => (x.id === updated.id ? updated : x)));
-    router.refresh();
-  }
-
   async function copyInviteLink(member: ProjectMember) {
     const link = `${window.location.origin}/api/invite?projectId=${projectId}&memberId=${member.id}`;
     try {
@@ -180,8 +161,36 @@ export function CastBoard({
   }
 
   function MemberRow({ member, showPositions }: { member: ProjectMember; showPositions?: boolean }) {
+    const [saving, setSaving] = useState(false);
     const unassigned = member.kind === "cast" && !member.displayName.trim();
     const positions = memberPositions(member);
+
+    async function togglePosition(pos: CrewPosition) {
+      if (saving) return;
+      const next = positions.includes(pos)
+        ? positions.filter((p) => p !== pos)
+        : [...positions, pos];
+      setSaving(true);
+      try {
+        const res = await fetch(`/api/projects/${projectId}/members/${member.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ positions: next }),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          toast(d.error || "Couldn't update permissions.");
+          return;
+        }
+        const updated: ProjectMember = await res.json();
+        setMembers((m) => m.map((x) => (x.id === updated.id ? updated : x)));
+        router.refresh();
+      } catch {
+        toast("Network error. Please try again.");
+      } finally {
+        setSaving(false);
+      }
+    }
 
     return (
       <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
@@ -210,9 +219,10 @@ export function CastBoard({
                   <button
                     key={pos}
                     title={POSITION_DESCRIPTIONS[pos]}
-                    onClick={() => togglePosition(member, pos, positions)}
+                    disabled={saving}
+                    onClick={() => togglePosition(pos)}
                     className={cn(
-                      "rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors",
+                      "rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors disabled:opacity-50",
                       active
                         ? "bg-red-600 text-white border-red-600"
                         : "bg-white text-slate-500 border-slate-300 hover:border-slate-500 hover:text-slate-700"

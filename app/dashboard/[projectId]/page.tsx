@@ -8,7 +8,7 @@ import { RoleAssignmentBoard } from "@/components/RoleAssignmentBoard";
 import { CastBoard } from "@/components/CastBoard";
 import { CheckCircle2 } from "lucide-react";
 import { getProductionType } from "@/lib/production-types";
-import { isProjectManager, isProjectAdmin } from "@/lib/project-access";
+import { isProjectAdmin, isProjectEditor } from "@/lib/project-access";
 
 type Params = Promise<{ projectId: string }>;
 
@@ -23,8 +23,8 @@ export default async function ProjectPage({ params }: { params: Params }) {
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) redirect("/dashboard");
 
-  const canManage = await isProjectManager(project, userId);
   const isAdmin = await isProjectAdmin(project, userId);
+  const canEdit = await isProjectEditor(project, userId);
 
   // Load all data in parallel
   const [members, projectAssignments, allRoles] = await Promise.all([
@@ -44,7 +44,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
       {/* Team members + permissions */}
       <CastBoard
         projectId={id}
-        isOwner={canManage}
+        isOwner={isAdmin}
         isAdmin={isAdmin}
         initialMembers={members}
       />
@@ -79,7 +79,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
         projectId={id}
         ownerId={project.ownerId}
         currentUserId={userId}
-        canManage={canManage}
+        canManage={canEdit}
         roles={allRoles.map((r) => ({
           ...r,
           duties: (r.duties as string[]) ?? [],
