@@ -84,10 +84,76 @@ const TIMES = ["", "DAY", "NIGHT", "DAWN", "DUSK", "CONTINUOUS"];
 const selectClass =
   "flex h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50";
 
-function statusBadge(status: string) {
-  if (status === "shot") return <Badge className="bg-emerald-600">Shot</Badge>;
-  if (status === "omitted") return <Badge variant="secondary">Omitted</Badge>;
-  return <Badge variant="outline">Planned</Badge>;
+const STATUS_CYCLE: Record<string, string> = {
+  planned: "shot",
+  shot: "omitted",
+  omitted: "planned",
+};
+
+function StatusBadge({
+  shot,
+  canEdit,
+  onToggle,
+}: {
+  shot: Shot;
+  canEdit: boolean;
+  onToggle: (id: number, next: string) => void;
+}) {
+  const { status } = shot;
+  let badge: React.ReactNode;
+  if (status === "shot") badge = <Badge className="bg-emerald-600">Shot</Badge>;
+  else if (status === "omitted") badge = <Badge variant="secondary">Omitted</Badge>;
+  else badge = <Badge variant="outline">Planned</Badge>;
+
+  if (!canEdit) return <>{badge}</>;
+
+  return (
+    <button
+      type="button"
+      className="cursor-pointer hover:opacity-75 transition-opacity"
+      title={`Cycle status (next: ${STATUS_CYCLE[status] ?? "planned"})`}
+      onClick={() => onToggle(shot.id, STATUS_CYCLE[status] ?? "planned")}
+    >
+      {badge}
+    </button>
+  );
+}
+
+function ShotProgress({ shots }: { shots: Shot[] }) {
+  const total = shots.length;
+  const shotCount = shots.filter((s) => s.status === "shot").length;
+  const omittedCount = shots.filter((s) => s.status === "omitted").length;
+  const plannedCount = total - shotCount - omittedCount;
+
+  if (total === 0) return null;
+
+  const shotPct = (shotCount / total) * 100;
+  const plannedPct = (plannedCount / total) * 100;
+  const omittedPct = (omittedCount / total) * 100;
+
+  return (
+    <div className="space-y-1.5 print:hidden">
+      <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className="bg-emerald-500" style={{ width: `${shotPct}%` }} />
+        <div className="bg-slate-300" style={{ width: `${plannedPct}%` }} />
+        <div className="bg-red-400" style={{ width: `${omittedPct}%` }} />
+      </div>
+      <div className="flex gap-3 text-xs text-slate-500">
+        <span>
+          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1" />
+          {shotCount} shot
+        </span>
+        <span>
+          <span className="inline-block h-2 w-2 rounded-full bg-slate-300 mr-1" />
+          {plannedCount} planned
+        </span>
+        <span>
+          <span className="inline-block h-2 w-2 rounded-full bg-red-400 mr-1" />
+          {omittedCount} omitted
+        </span>
+      </div>
+    </div>
+  );
 }
 
 const NO_CAST = "Unassigned";
@@ -547,6 +613,26 @@ export function ShotListBoard({
 
   const selection = { mode: selectMode, selected, toggle: toggleSelected };
 
+  async function toggleShotStatus(id: number, next: string) {
+    // Optimistic update
+    setShots((s) => s.map((x) => (x.id === id ? { ...x, status: next } : x)));
+    try {
+      const res = await fetch(`${api}/shots/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) {
+        // Revert on failure
+        setShots((s) => s.map((x) => (x.id === id ? { ...x, status: STATUS_CYCLE[next] ?? "planned" } : x)));
+        toast("Couldn't update status.", "error");
+      }
+    } catch {
+      setShots((s) => s.map((x) => (x.id === id ? { ...x, status: STATUS_CYCLE[next] ?? "planned" } : x)));
+      toast("Network error.", "error");
+    }
+  }
+
   const unlinkedShots = shots.filter((s) => s.sceneId === null);
 
   const hasShots = shots.length > 0;
@@ -624,6 +710,8 @@ export function ShotListBoard({
           </div>
         )}
       </div>
+
+      <ShotProgress shots={shots} />
 
       {/* Mass-selection action bar */}
       {canEdit && selectMode && (
@@ -745,6 +833,7 @@ export function ShotListBoard({
               onAddShot={() => setShotDialog({ open: true, shot: null, sceneId: scene.id })}
               onEditShot={(shot) => setShotDialog({ open: true, shot, sceneId: scene.id })}
               onDeleteShot={deleteShot}
+              onToggleStatus={toggleShotStatus}
             />
           ))}
 
@@ -759,6 +848,7 @@ export function ShotListBoard({
               onAddShot={() => setShotDialog({ open: true, shot: null, sceneId: null })}
               onEditShot={(shot) => setShotDialog({ open: true, shot, sceneId: null })}
               onDeleteShot={deleteShot}
+              onToggleStatus={toggleShotStatus}
             />
           )}
 
@@ -802,6 +892,7 @@ export function ShotListBoard({
                   setShotDialog({ open: true, shot, sceneId: shot.sceneId })
                 }
                 onDeleteShot={deleteShot}
+                onToggleStatus={toggleShotStatus}
               />
             </div>
           ))}
@@ -879,6 +970,7 @@ function SceneCard({
   onAddShot,
   onEditShot,
   onDeleteShot,
+  onToggleStatus,
 }: {
   scene: Scene | null;
   shots: Shot[];
@@ -889,6 +981,7 @@ function SceneCard({
   onAddShot: () => void;
   onEditShot: (shot: Shot) => void;
   onDeleteShot: (shot: Shot) => void;
+  onToggleStatus: (id: number, next: string) => void;
 }) {
   const meta = scene
     ? [scene.intExt, scene.location, scene.timeOfDay].filter(Boolean).join(" · ")
@@ -982,7 +1075,7 @@ function SceneCard({
                   >
                     {shot.castNotes?.trim() || "Add"}
                   </TableCell>
-                  <TableCell>{statusBadge(shot.status)}</TableCell>
+                  <TableCell>{<StatusBadge shot={shot} canEdit={canEdit} onToggle={onToggleStatus} />}</TableCell>
                   {canEdit && !selection.mode && (
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -1255,6 +1348,7 @@ function FlatShotTable({
   selection,
   onEditShot,
   onDeleteShot,
+  onToggleStatus,
 }: {
   shots: Shot[];
   sceneName: (sceneId: number | null) => string;
@@ -1262,6 +1356,7 @@ function FlatShotTable({
   selection: Selection;
   onEditShot: (shot: Shot) => void;
   onDeleteShot: (shot: Shot) => void;
+  onToggleStatus: (id: number, next: string) => void;
 }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white overflow-x-auto">
@@ -1311,7 +1406,7 @@ function FlatShotTable({
               <TableCell className={shot.castNotes?.trim() ? "" : "text-amber-600"}>
                 {shot.castNotes?.trim() || "Add"}
               </TableCell>
-              <TableCell>{statusBadge(shot.status)}</TableCell>
+              <TableCell>{<StatusBadge shot={shot} canEdit={canEdit} onToggle={onToggleStatus} />}</TableCell>
               {canEdit && !selection.mode && (
                 <TableCell>
                   <div className="flex items-center gap-1">

@@ -1,9 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { projects, scripts, scriptSuggestions, projectMembers } from "@/lib/db/schema";
+import { projects, scripts, scriptSuggestions, projectMembers, shots } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { ScriptWorkspace } from "@/components/ScriptWorkspace";
+import { CharacterStatsPanel } from "@/components/CharacterStatsPanel";
+import type { CharacterStat } from "@/components/CharacterStatsPanel";
 import { writerIdOf } from "@/lib/script-access";
 import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 import { isProjectManager, isProjectEditor } from "@/lib/project-access";
@@ -53,8 +55,53 @@ export default async function ScriptPage({ params }: { params: Params }) {
     .filter((m) => m.kind === "cast")
     .map((m) => ({ displayName: m.displayName, character: m.character ?? null }));
 
+  // Compute character stats from shots + scenes
+  const projectShots = await db.select().from(shots).where(eq(shots.projectId, id));
+
+  const characterMap = new Map<string, { shots: number; sceneIds: Set<number | null> }>();
+
+  function parseCharacters(notes: string): string[] {
+    return notes
+      .split(/,|&|\band\b|\/|\+/i)
+      .map((n) => n.trim())
+      .filter(Boolean);
+  }
+
+  for (const shot of projectShots) {
+    if (!shot.castNotes) continue;
+    const characters = parseCharacters(shot.castNotes);
+    for (const char of characters) {
+      const key = char.toLowerCase();
+      if (!characterMap.has(key)) {
+        characterMap.set(key, { shots: 0, sceneIds: new Set() });
+      }
+      const entry = characterMap.get(key)!;
+      entry.shots += 1;
+      entry.sceneIds.add(shot.sceneId ?? null);
+    }
+  }
+
+  // Re-derive with proper display names (use first-seen casing)
+  const displayNames = new Map<string, string>();
+  for (const shot of projectShots) {
+    if (!shot.castNotes) continue;
+    for (const char of parseCharacters(shot.castNotes)) {
+      const key = char.toLowerCase();
+      if (!displayNames.has(key)) displayNames.set(key, char);
+    }
+  }
+
+  const characterStats: CharacterStat[] = Array.from(characterMap.entries())
+    .map(([key, val]) => ({
+      character: displayNames.get(key) ?? key,
+      shots: val.shots,
+      scenes: val.sceneIds.size,
+    }))
+    .filter((s) => s.shots >= 1)
+    .sort((a, b) => b.shots - a.shots);
+
   return (
-    <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6">
+    <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
       <ScriptWorkspace
         projectId={id}
         isOwner={canManage}
@@ -70,6 +117,7 @@ export default async function ScriptPage({ params }: { params: Params }) {
         initialFileName={script?.fileName ?? null}
         initialSuggestions={suggestions}
       />
+      <CharacterStatsPanel characterStats={characterStats} />
     </main>
   );
 }
