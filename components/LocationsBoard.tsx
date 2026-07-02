@@ -2,8 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useState, useCallback } from "react";
-import { MapPin, Search, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { MapPin, Search, ExternalLink, Loader2, AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/Toaster";
 import { cn } from "@/lib/utils";
 
 // Leaflet must be loaded client-side only
@@ -41,6 +42,37 @@ export function LocationsBoard({ projectId, days: initialDays, canManage }: Prop
     initialDays.find((d) => d.lat && d.lng)?.id ?? null
   );
   const [geoState, setGeoState] = useState<Record<number, GeoState>>({});
+  const [importing, setImporting] = useState(false);
+
+  async function importFromScript() {
+    setImporting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/locations/from-script`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Couldn't read locations from the script.", "error");
+        return;
+      }
+      const created: ShootDayLocation[] = data.created ?? [];
+      if (created.length === 0) {
+        toast(
+          data.skipped
+            ? "Every location in the script is already listed."
+            : "No new locations found."
+        );
+        return;
+      }
+      setDays((prev) => [...prev, ...created]);
+      const skippedNote = data.skipped ? ` (${data.skipped} already listed)` : "";
+      toast(`Added ${created.length} location${created.length !== 1 ? "s" : ""} from the script${skippedNote}.`);
+    } catch {
+      toast("Network error. Please try again.", "error");
+    } finally {
+      setImporting(false);
+    }
+  }
 
   const geocode = useCallback(
     async (day: ShootDayLocation) => {
@@ -77,6 +109,29 @@ export function LocationsBoard({ projectId, days: initialDays, canManage }: Prop
 
   return (
     <div className="space-y-6">
+      {canManage && (
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-slate-400" />
+            Locations
+          </h2>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={importFromScript}
+            disabled={importing}
+            title="Import scene locations from your script"
+          >
+            {importing ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Import from script
+          </Button>
+        </div>
+      )}
+
       {/* Map */}
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
         <div className="h-[400px] sm:h-[480px]">

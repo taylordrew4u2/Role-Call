@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { assignments } from "@/lib/db/schema";
+import { assignments, projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getProjectRoles } from "@/lib/db/project-roles";
 import { requireProjectManager } from "@/lib/project-access";
@@ -54,8 +54,17 @@ export async function POST(
     3: member3Id,
   };
 
+  // This template assigns people to the standard role names, so loading it
+  // implicitly opts the project into the global role template too.
+  if (!access.project.rolesTemplateLoaded) {
+    await db
+      .update(projects)
+      .set({ rolesTemplateLoaded: true })
+      .where(eq(projects.id, id));
+  }
+
   // Load this project's roles (global templates + custom, minus hidden)
-  const allRoles = await getProjectRoles(id);
+  const allRoles = await getProjectRoles(id, true);
 
   // Delete existing assignments for this project
   await db.delete(assignments).where(eq(assignments.projectId, id));

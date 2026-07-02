@@ -4,15 +4,24 @@ import { roles, projectHiddenRoles } from "./schema";
 import type { Role } from "./schema";
 
 /**
- * The roles shown for a project: global template roles (project_id IS NULL)
- * plus the project's own custom roles, minus any the project has hidden.
+ * The roles shown for a project: the project's own custom roles, plus the
+ * global template roles (project_id IS NULL) — but only once the project has
+ * opted into the template via "Load template" — minus any the project has
+ * hidden.
  */
-export async function getProjectRoles(projectId: number): Promise<Role[]> {
+export async function getProjectRoles(
+  projectId: number,
+  includeGlobalTemplate: boolean
+): Promise<Role[]> {
   const [all, hidden] = await Promise.all([
     db
       .select()
       .from(roles)
-      .where(or(isNull(roles.projectId), eq(roles.projectId, projectId))),
+      .where(
+        includeGlobalTemplate
+          ? or(isNull(roles.projectId), eq(roles.projectId, projectId))
+          : eq(roles.projectId, projectId)
+      ),
     db
       .select()
       .from(projectHiddenRoles)

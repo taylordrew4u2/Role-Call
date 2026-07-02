@@ -71,6 +71,8 @@ interface RoleAssignmentBoardProps {
   currentUserId: string;
   /** Owner or a director — can manage the project. */
   canManage?: boolean;
+  /** Whether the project has opted into the global role template. */
+  rolesTemplateLoaded?: boolean;
   roles: Role[];
   members: Member[];
   assignments: Assignment[];
@@ -85,6 +87,7 @@ export function RoleAssignmentBoard({
   ownerId,
   currentUserId,
   canManage,
+  rolesTemplateLoaded = true,
   roles,
   members: initialMembers,
   assignments: initialAssignments,
@@ -129,6 +132,27 @@ export function RoleAssignmentBoard({
   }>({ open: false, editing: null, name: "", category: "", isCritical: false, saving: false });
   const [confirmRemoveRole, setConfirmRemoveRole] = useState<Role | null>(null);
   const [confirmTemplate, setConfirmTemplate] = useState(false);
+  const [templateLoaded, setTemplateLoaded] = useState(rolesTemplateLoaded);
+  const [loadingRoleTemplate, setLoadingRoleTemplate] = useState(false);
+
+  async function loadRoleTemplate() {
+    setLoadingRoleTemplate(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/roles-template`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const loaded: Role[] = await res.json();
+        setRoleList(loaded.map((r) => ({ ...r, duties: r.duties ?? [] })));
+        setTemplateLoaded(true);
+        toast("Role template loaded.");
+      } else {
+        toast("Couldn't load the role template. Please try again.", "error");
+      }
+    } finally {
+      setLoadingRoleTemplate(false);
+    }
+  }
 
   function openAddRole() {
     setRoleForm({ open: true, editing: null, name: "", category: "", isCritical: false, saving: false });
@@ -291,6 +315,14 @@ export function RoleAssignmentBoard({
       if (!res.ok) throw new Error("Template load failed");
       const result = await res.json();
       setAssignments(result.assignments);
+      if (!templateLoaded) {
+        const rolesRes = await fetch(`/api/projects/${projectId}/roles`);
+        if (rolesRes.ok) {
+          const loaded: Role[] = await rolesRes.json();
+          setRoleList(loaded.map((r) => ({ ...r, duties: r.duties ?? [] })));
+        }
+        setTemplateLoaded(true);
+      }
     } catch (e) {
       toast("Failed to load template. Please try again.", "error");
       console.error(e);
@@ -459,11 +491,27 @@ export function RoleAssignmentBoard({
               {visibleRoles.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={isOwner ? 6 : 5} className="py-10 text-center text-sm text-slate-400">
-                    {members.length === 0
-                      ? "Invite team members first, then assign them to roles."
-                      : roleList.length === 0
-                        ? "No roles yet. Add one with the button above."
-                        : "No roles match the current filter."}
+                    {roleList.length === 0 && !templateLoaded ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <p>No roles yet — nothing is auto-loaded until you say so.</p>
+                        {isOwner && (
+                          <Button size="sm" onClick={loadRoleTemplate} disabled={loadingRoleTemplate}>
+                            {loadingRoleTemplate ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <Zap className="h-3.5 w-3.5 mr-1.5" />
+                            )}
+                            Load role template
+                          </Button>
+                        )}
+                      </div>
+                    ) : members.length === 0 ? (
+                      "Invite team members first, then assign them to roles."
+                    ) : roleList.length === 0 ? (
+                      "No roles yet. Add one with the button above."
+                    ) : (
+                      "No roles match the current filter."
+                    )}
                   </TableCell>
                 </TableRow>
               )}
