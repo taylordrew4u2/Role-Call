@@ -26,7 +26,7 @@ interface CastMember {
 export function ScriptWorkspace({
   projectId,
   isOwner,
-  isWriter,
+  userId,
   canViewEditing = true,
   ownerId,
   writerId,
@@ -40,7 +40,7 @@ export function ScriptWorkspace({
 }: {
   projectId: number;
   isOwner: boolean;
-  isWriter: boolean;
+  userId: string;
   canViewEditing?: boolean;
   ownerId: string;
   writerId: string | null;
@@ -59,6 +59,7 @@ export function ScriptWorkspace({
   const [fileName, setFileName] = useState(initialFileName);
   const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [currentWriter, setCurrentWriter] = useState<string | null>(writerId);
+  const isWriter = currentWriter !== null && currentWriter === userId;
 
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestAnchor, setSuggestAnchor] = useState("");
