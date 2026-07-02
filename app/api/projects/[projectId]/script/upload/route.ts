@@ -78,11 +78,11 @@ async function extractText(file: File): Promise<string | null> {
   }
   if (name.endsWith(".pdf")) {
     try {
-      const { PDFParse } = await import("pdf-parse");
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const parser = new PDFParse({ data: buffer });
-      const result = await parser.getText();
-      return result.text;
+      const { getDocumentProxy, extractText } = await import("unpdf");
+      const buffer = new Uint8Array(await file.arrayBuffer());
+      const pdf = await getDocumentProxy(buffer);
+      const { text } = await extractText(pdf, { mergePages: true });
+      return text;
     } catch {
       // Malformed or image-only (scanned) PDF — keep the file as a download link.
       return null;
