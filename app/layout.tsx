@@ -9,6 +9,7 @@ import { auth } from "@clerk/nextjs/server";
 import "./globals.css";
 import { Toaster } from "@/components/Toaster";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -97,6 +98,7 @@ export default function RootLayout({
           {children}
           <Toaster />
           <ServiceWorkerRegistrar />
+          <OfflineIndicator />
         </ClerkProvider>
       </body>
     </html>
