@@ -34,7 +34,14 @@ export async function POST(request: Request, { params }: { params: Params }) {
   });
 
   // For plain-text-ish formats, extract the text so it shows in the editor below.
-  const content = await extractText(file);
+  let content: string | null = null;
+  let extractError: string | null = null;
+  try {
+    content = await extractText(file);
+  } catch (err) {
+    console.error("Script text extraction failed:", err);
+    extractError = err instanceof Error ? err.message : String(err);
+  }
 
   // Persist the file URL (and extracted content, if any) on the script row.
   const [existing] = await db
@@ -46,8 +53,10 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const contentFields = content !== null ? { content } : {};
   // First script for this project: also publish it as the final script so it
   // shows up on the Final tab immediately, without a separate publish step.
-  const isFirstContent = content !== null && !existing?.finalContent?.trim();
-  const finalFields = isFirstContent ? { finalContent: content } : {};
+  const finalFields =
+    content !== null && !existing?.finalContent?.trim()
+      ? { finalContent: content }
+      : {};
 
   let saved;
   if (existing) {
@@ -64,7 +73,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   }
 
   return Response.json(
-    { url: blob.url, name: file.name, content, finalContent: saved.finalContent },
+    { url: blob.url, name: file.name, content, finalContent: saved.finalContent, extractError },
     { status: 201 }
   );
 }
@@ -87,16 +96,25 @@ async function extractText(file: File): Promise<string | null> {
     return lines.join("\n");
   }
   if (name.endsWith(".pdf")) {
-    try {
-      const { getDocumentProxy, extractText } = await import("unpdf");
-      const buffer = new Uint8Array(await file.arrayBuffer());
-      const pdf = await getDocumentProxy(buffer);
-      const { text } = await extractText(pdf, { mergePages: true });
-      return text;
-    } catch {
-      // Malformed or image-only (scanned) PDF — keep the file as a download link.
-      return null;
+    // Errors propagate to the caller, which reports them to the client —
+    // a silent failure here reads as "PDF extraction doesn't work".
+    // pdfjs (inside unpdf) needs Promise.withResolvers, missing on Node < 22.
+    if (typeof Promise.withResolvers !== "function") {
+      Promise.withResolvers = function <T>() {
+        let resolve!: (value: T | PromiseLike<T>) => void;
+        let reject!: (reason?: unknown) => void;
+        const promise = new Promise<T>((res, rej) => {
+          resolve = res;
+          reject = rej;
+        });
+        return { promise, resolve, reject };
+      };
     }
+    const { getDocumentProxy, extractText } = await import("unpdf");
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const pdf = await getDocumentProxy(buffer);
+    const { text } = await extractText(pdf, { mergePages: true });
+    return text;
   }
   return null;
 }
