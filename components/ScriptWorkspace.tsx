@@ -202,6 +202,7 @@ export function ScriptWorkspace({
               setFileUrl(url);
               setFileName(name);
             }}
+            onPublished={setFinalContent}
             characterNames={cast
               .map((c) => c.character)
               .filter((c): c is string => Boolean(c && c.trim()))}

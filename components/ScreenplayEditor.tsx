@@ -75,6 +75,7 @@ export function ScreenplayEditor({
   fileUrl,
   fileName,
   onFileChange,
+  onPublished,
   characterNames = [],
 }: {
   projectId: number;
@@ -85,6 +86,7 @@ export function ScreenplayEditor({
   fileUrl: string | null;
   fileName: string | null;
   onFileChange: (url: string | null, name: string | null) => void;
+  onPublished?: (finalContent: string) => void;
   characterNames?: string[];
 }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -323,6 +325,9 @@ export function ScreenplayEditor({
       if (typeof data.content === "string") {
         pushChange(data.content);
         setExtractFailed(false);
+        if (typeof data.finalContent === "string" && data.finalContent) {
+          onPublished?.(data.finalContent);
+        }
       } else {
         setExtractFailed(true);
       }

@@ -44,19 +44,29 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
   const fileFields = { fileUrl: blob.url, fileName: file.name, updatedAt: new Date() };
   const contentFields = content !== null ? { content } : {};
+  // First script for this project: also publish it as the final script so it
+  // shows up on the Final tab immediately, without a separate publish step.
+  const isFirstContent = content !== null && !existing?.finalContent?.trim();
+  const finalFields = isFirstContent ? { finalContent: content } : {};
 
+  let saved;
   if (existing) {
-    await db
+    [saved] = await db
       .update(scripts)
-      .set({ ...fileFields, ...contentFields })
-      .where(eq(scripts.projectId, access.id));
+      .set({ ...fileFields, ...contentFields, ...finalFields })
+      .where(eq(scripts.projectId, access.id))
+      .returning();
   } else {
-    await db
+    [saved] = await db
       .insert(scripts)
-      .values({ projectId: access.id, ...fileFields, ...contentFields });
+      .values({ projectId: access.id, ...fileFields, ...contentFields, ...finalFields })
+      .returning();
   }
 
-  return Response.json({ url: blob.url, name: file.name, content }, { status: 201 });
+  return Response.json(
+    { url: blob.url, name: file.name, content, finalContent: saved.finalContent },
+    { status: 201 }
+  );
 }
 
 /** Extracts plain text from text-based screenplay formats and PDFs. Returns
