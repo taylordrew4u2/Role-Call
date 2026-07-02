@@ -23,6 +23,10 @@ import {
   applyElement,
   insertSceneTemplate,
   ELEMENT_LABELS,
+  detectElement,
+  cycleElement,
+  nextElementOnEnter,
+  autoCapsElement,
   type ScreenplayElement,
 } from "@/lib/screenplay-format";
 
@@ -71,6 +75,7 @@ export function ScreenplayEditor({
   fileUrl,
   fileName,
   onFileChange,
+  characterNames = [],
 }: {
   projectId: number;
   canEdit: boolean;
@@ -80,11 +85,13 @@ export function ScreenplayEditor({
   fileUrl: string | null;
   fileName: string | null;
   onFileChange: (url: string | null, name: string | null) => void;
+  characterNames?: string[];
 }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [uploadError, setUploadError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [charSuggest, setCharSuggest] = useState<{ options: string[]; lineStart: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -124,8 +131,63 @@ export function ScreenplayEditor({
     debounceRef.current = setTimeout(() => save(next), SAVE_DEBOUNCE_MS);
   }
 
+  function currentLineBounds(text: string, cursor: number) {
+    const lineStart = text.lastIndexOf("\n", cursor - 1) + 1;
+    let lineEnd = text.indexOf("\n", cursor);
+    if (lineEnd === -1) lineEnd = text.length;
+    return { lineStart, lineEnd };
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    pushChange(e.target.value);
+    const ta = e.target;
+    let next = ta.value;
+    const cursor = ta.selectionStart;
+
+    // Live auto-caps for scene/character/transition lines. Uppercasing in
+    // place never changes length, so the cursor position stays valid.
+    const { lineStart, lineEnd } = currentLineBounds(next, cursor);
+    const line = next.slice(lineStart, lineEnd);
+    const element = detectElement(line);
+    if (autoCapsElement(element) && line !== line.toUpperCase()) {
+      next = next.slice(0, lineStart) + line.toUpperCase() + next.slice(lineEnd);
+      requestAnimationFrame(() => ta.setSelectionRange(cursor, cursor));
+    }
+
+    // Character-cue autocomplete: offer cast names as the writer types an
+    // indented character line.
+    if (element === "character" && characterNames.length > 0) {
+      const typed = line.trim();
+      const options = typed
+        ? characterNames.filter(
+            (n) => n.toUpperCase().startsWith(typed.toUpperCase()) && n.toUpperCase() !== typed.toUpperCase()
+          )
+        : [];
+      setCharSuggest(options.length > 0 ? { options, lineStart } : null);
+    } else {
+      setCharSuggest(null);
+    }
+
+    pushChange(next);
+  }
+
+  function acceptSuggestion(name: string) {
+    const ta = textareaRef.current;
+    if (!ta || !charSuggest) return;
+    const { lineStart } = charSuggest;
+    const { lineEnd } = currentLineBounds(content, lineStart);
+    const formatted = formatCharacterLine(name);
+    const next = content.slice(0, lineStart) + formatted + content.slice(lineEnd);
+    setCharSuggest(null);
+    pushChange(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = lineStart + formatted.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  }
+
+  function formatCharacterLine(name: string): string {
+    return " ".repeat(20) + name.toUpperCase();
   }
 
   function applyFormat(element: ScreenplayElement) {
@@ -153,6 +215,71 @@ export function ScreenplayEditor({
       ta.focus();
       ta.setSelectionRange(selStart, selEnd);
     });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+
+    // Autocomplete dropdown takes priority when open.
+    if (charSuggest && (e.key === "Tab" || e.key === "Enter")) {
+      e.preventDefault();
+      acceptSuggestion(charSuggest.options[0]);
+      return;
+    }
+    if (e.key === "Escape" && charSuggest) {
+      setCharSuggest(null);
+      return;
+    }
+
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const { lineStart, lineEnd } = currentLineBounds(content, ta.selectionStart);
+      const current = detectElement(content.slice(lineStart, lineEnd));
+      const { text, selStart, selEnd } = applyElement(
+        content,
+        ta.selectionStart,
+        ta.selectionStart,
+        cycleElement(current)
+      );
+      pushChange(text);
+      requestAnimationFrame(() => {
+        ta.focus();
+        ta.setSelectionRange(selStart, selEnd);
+      });
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const cursor = ta.selectionStart;
+      const { lineStart, lineEnd } = currentLineBounds(content, cursor);
+      const current = detectElement(content.slice(lineStart, lineEnd));
+      const next = nextElementOnEnter(current);
+      const before = content.slice(0, cursor);
+      const after = content.slice(cursor);
+      const prefix = formatLinePrefix(next);
+      const nextText = before + "\n" + prefix + after;
+      pushChange(nextText);
+      const pos = cursor + 1 + prefix.length;
+      requestAnimationFrame(() => {
+        ta.focus();
+        ta.setSelectionRange(pos, pos);
+      });
+    }
+  }
+
+  function formatLinePrefix(element: ScreenplayElement): string {
+    switch (element) {
+      case "character":
+        return " ".repeat(20);
+      case "parenthetical":
+        return " ".repeat(15);
+      case "dialogue":
+        return " ".repeat(10);
+      default:
+        return "";
+    }
   }
 
   function suggestSelection() {
@@ -359,11 +486,13 @@ export function ScreenplayEditor({
 
       {/* Screenplay page */}
       <div className="rounded-lg bg-slate-300 py-6 px-4 min-h-[70vh]">
-        <div className="bg-white shadow-md mx-auto max-w-[680px] min-h-[64vh]">
+        <div className="relative bg-white shadow-md mx-auto max-w-[680px] min-h-[64vh]">
           <textarea
             ref={textareaRef}
             value={content}
             onChange={handleChange}
+            onKeyDown={canEdit ? handleKeyDown : undefined}
+            onBlur={() => setCharSuggest(null)}
             readOnly={!canEdit}
             aria-readonly={!canEdit}
             placeholder={
@@ -379,10 +508,34 @@ export function ScreenplayEditor({
               padding: "72px 64px",
             }}
           />
+          {charSuggest && (
+            <div className="absolute left-16 z-10 mt-1 w-56 rounded-md border border-slate-200 bg-white shadow-lg overflow-hidden" style={{ top: "72px" }}>
+              {charSuggest.options.slice(0, 6).map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    acceptSuggestion(name);
+                  }}
+                  className="w-full px-3 py-1.5 text-left text-sm font-mono text-slate-800 hover:bg-slate-100"
+                >
+                  {name.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {!canEdit && (
+      {canEdit ? (
+        <p className="text-xs text-slate-400">
+          <span className="font-medium text-slate-500">Tab</span> cycles the current line's
+          format · <span className="font-medium text-slate-500">Enter</span> continues with the
+          logical next element (Character → Dialogue, Scene → Action, …) · scene headings,
+          character cues, and transitions auto-capitalize as you type.
+        </p>
+      ) : (
         <p className="text-xs text-slate-500">
           You can&apos;t edit the script directly. Select the text you want changed and
           click <span className="font-medium">&ldquo;Suggest an edit&rdquo;</span> — the writer

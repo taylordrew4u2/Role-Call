@@ -46,6 +46,64 @@ export const ELEMENT_LABELS: Record<ScreenplayElement, string> = {
   transition: "Transition",
 };
 
+const TRANSITION_RE = /(TO:|FADE IN:|FADE OUT\.?|CUT TO:|SMASH CUT TO:)$/i;
+
+/** Best-effort guess at a raw line's screenplay element, from its indentation
+ * and content. Used to drive Tab-cycling and smart-Enter continuation. */
+export function detectElement(line: string): ScreenplayElement {
+  const indent = line.length - line.trimStart().length;
+  const bare = line.trim();
+  if (!bare) return "action";
+  if (indent >= CHARACTER_INDENT.length) return "character";
+  if (indent >= PARENTHETICAL_INDENT.length) return "parenthetical";
+  if (indent >= DIALOGUE_INDENT.length) return "dialogue";
+  if (SCENE_HEADING_RE.test(bare)) return "scene";
+  if (TRANSITION_RE.test(bare) && bare === bare.toUpperCase()) return "transition";
+  return "action";
+}
+
+const SCENE_HEADING_RE =
+  /^\s*(?:[0-9]+[A-Za-z]?[.)]?\s*)?(?:INT|EXT|EST|INT\.?\/EXT|EXT\.?\/INT|I\/E)\.?[\s.]/i;
+
+/** Tab cycles a line through the most commonly-alternated element types. */
+const CYCLE_ORDER: ScreenplayElement[] = [
+  "action",
+  "character",
+  "dialogue",
+  "parenthetical",
+  "scene",
+  "transition",
+];
+
+export function cycleElement(current: ScreenplayElement): ScreenplayElement {
+  const idx = CYCLE_ORDER.indexOf(current);
+  return CYCLE_ORDER[(idx + 1) % CYCLE_ORDER.length];
+}
+
+/** What Enter should switch to next, matching standard screenwriting flow. */
+export function nextElementOnEnter(current: ScreenplayElement): ScreenplayElement {
+  switch (current) {
+    case "scene":
+      return "action";
+    case "character":
+      return "dialogue";
+    case "parenthetical":
+      return "dialogue";
+    case "dialogue":
+      return "character";
+    case "transition":
+      return "scene";
+    case "action":
+    default:
+      return "action";
+  }
+}
+
+/** Elements that should auto-uppercase as the writer types (no need to hold Tab first). */
+export function autoCapsElement(element: ScreenplayElement): boolean {
+  return element === "scene" || element === "character" || element === "transition";
+}
+
 /**
  * Apply an element format to every line that the selection touches.
  * Returns the new text plus the selection range to restore afterward.
