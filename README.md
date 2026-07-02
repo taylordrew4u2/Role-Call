@@ -86,24 +86,37 @@ parsing.
 - **🎥 Shot list from script** — generates scenes + shots (action, full
   **dialogue coverage**, or both) with **zero AI cost**. Descriptions read like
   the script; framing lives in the Size/Angle columns; **every shot is tagged
-  with its character**.
+  with its character**. Click a status badge to cycle planned → shot → omitted,
+  with a live progress bar per project.
 - **📱 Camera-aware coverage** — **iPhone / 1 camera** (one person per shot) vs.
   **2 cameras** (adds two-shots); the By-Cast view gains a "Characters
   together" section.
-- **✍️ Script workspace** — Editing draft + published **Final Script**, a
-  screenwriting toolbar, and a **suggest-and-approve** flow with an appointed
-  **Writer**.
+- **✍️ Script workspace** — a **Celtx-style screenplay editor** (Tab cycles
+  element types, Enter flows Character → Dialogue, character cues autocomplete
+  from the cast, live auto-caps), plus a published **Final Script** rendered on
+  an identical page, and a **suggest-and-approve** flow with an appointed
+  **Writer**. Upload **PDF, Final Draft (.fdx), Fountain, or .txt** — text is
+  extracted with the screenplay layout intact and lands straight in the editor.
+- **📲 Installable app + offline sync** — a real PWA: add it to your phone's
+  home screen (the site prompts mobile visitors), pages and data you've viewed
+  stay readable offline, and edits made offline queue on-device and **sync
+  automatically when you're back online**.
 - **🎟️ Smart invites** — name-only invites with a copyable link (no account or
   email required); invite **as Writer or Director**, where a Director gets
   **full owner-level powers**.
 - **👥 Side-by-side team view** — Cast and Collaborators displayed in parallel
   columns; permission pills inline. Only crew (not actors) appear in the Role
   Assignment board — cast is its own role type.
-- **🎬 Roles & crew** — onboarding wizard, Role Assignment Board with
-  critical-role warnings, one-click **lean 8-person template**.
+- **🎬 Roles & crew** — the role board starts empty and loads the standard
+  role catalog **only when you ask** ("Load role template"), with critical-role
+  warnings and a one-click **lean 8-person template**.
+- **🗺️ Locations** — import scene locations straight from the script, geocode
+  them, and see every shoot spot pinned on an interactive map.
 - **🎞️ Series** — one team across many projects, via automatic fan-out.
-- **🗓️ Schedule + exports** — shoot days with call times; **CSV** export, copy
-  as text, print; **fully responsive**.
+- **🗓️ Schedule + exports** — shoot days with call times, cast-on-set and shot
+  counts per day; **CSV** export, copy as text, print; **fully responsive**.
+- **🔍 SEO & AI-search ready** — sitemap, robots, Open Graph, JSON-LD
+  structured data, and an `llms.txt` for AI answer engines.
 
 ---
 
@@ -150,13 +163,16 @@ once. _No third-party billing required._
 
 ## 🎯 Usage
 
-1. **Create a project** — the wizard recommends crew for what you're making.
-2. **Add the script** — type/paste in the Script tab (autosaves).
+1. **Create a project** — pick what you're making; RoleCall recommends the crew.
+2. **Add the script** — write it in the screenplay editor or upload a
+   PDF/.fdx/Fountain/.txt file (text is extracted with formatting intact).
 3. **Generate the cast** — one click pulls every character from the script.
 4. **Generate the shot list** — pick camera setup + coverage; RoleCall builds
    scenes + shots, each tagged with who's in it.
-5. **Invite the team** — share copyable links; assign roles; set shoot days.
-6. **On set** — open it on your phone, work the **By Cast** view, export/print.
+5. **Invite the team** — share copyable links; assign roles; set shoot days;
+   import locations from the script onto the map.
+6. **On set** — install it on your phone (Add to Home Screen), work the
+   **By Cast** view offline, and let changes sync when signal returns.
 
 ---
 
@@ -226,18 +242,21 @@ flowchart LR
 - Real screenshots/Loom walkthrough in the demo section.
 - Drag-to-reorder shots and shoot-day scheduling board.
 - PDF call-sheet export per shoot day.
-- Import `.fdx`/Fountain and richer scene/character analytics.
-- Automated tests around the parsers (the highest-value unit-test target).
+- Automated tests around the parsers and PDF layout extraction (the
+  highest-value unit-test targets).
 
 ---
 
 ## 📂 Project structure
 
 ```
-app/            Next.js routes (dashboard, project tabs, API route handlers)
-components/     UI — ShotListBoard, ScriptWorkspace, RoleAssignmentBoard, …
-lib/            parsers (script→cast/scenes/shots), access guards, Drizzle schema,
-                member-positions (shared crew-position util used across components)
+app/            Next.js routes (dashboard, project tabs, API route handlers,
+                manifest / robots / sitemap)
+components/     UI — ShotListBoard, ScriptWorkspace, ScreenplayEditor,
+                RoleAssignmentBoard, LocationsBoard, InstallPrompt, …
+lib/            parsers (script→cast/scenes/shots), pdf-screenplay layout
+                extraction, access guards, Drizzle schema
+public/         PWA service worker (offline cache + sync outbox), icons, llms.txt
 docs/           screenshots & brand assets
 ```
 
