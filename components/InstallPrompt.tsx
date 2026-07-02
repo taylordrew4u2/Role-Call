@@ -79,7 +79,7 @@ export function InstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-50 rounded-xl border border-slate-200 bg-white p-4 shadow-xl sm:left-auto sm:right-4 sm:w-80 print:hidden">
+    <div className="fixed inset-x-3 bottom-20 sm:bottom-3 z-50 rounded-xl border border-slate-200 bg-white p-4 shadow-xl sm:left-auto sm:right-4 sm:w-80 print:hidden">
       <button
         onClick={dismiss}
         aria-label="Dismiss install prompt"

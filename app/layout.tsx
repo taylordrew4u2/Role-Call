@@ -64,6 +64,11 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: "#dc2626",
+  width: "device-width",
+  initialScale: 1,
+  // Extend the layout under notches / home indicators so safe-area
+  // insets (used by the mobile bottom nav) work.
+  viewportFit: "cover" as const,
 };
 
 async function NavAuth() {

@@ -11,6 +11,40 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* ── Native-app feel on mobile ─────────────────────────────────────────── */
+
+html {
+  /* No rubber-band overscroll or accidental pull-to-refresh */
+  overscroll-behavior-y: none;
+}
+
+body {
+  /* Kill the grey/blue tap flash on iOS/Android */
+  -webkit-tap-highlight-color: transparent;
+  /* Momentum scrolling for nested scroll areas */
+  -webkit-overflow-scrolling: touch;
+}
+
+button, a, [role="button"] {
+  /* Buttons shouldn't select their label text on long-press */
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation; /* no double-tap-to-zoom delay */
+}
+
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+@media (max-width: 640px) {
+  /* iOS zooms into inputs with font-size < 16px — keep it at 16 so the
+     viewport stays put, like a native form. */
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
 /* Smooth dialog animations */
 @keyframes fadeIn {
   from { opacity: 0; }

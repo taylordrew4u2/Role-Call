@@ -103,7 +103,8 @@ export default async function ProjectLayout({
       <ProjectTabs projectId={id} />
 
       <AutoRefresh />
-      {children}
+      {/* Bottom padding on phones so content clears the fixed bottom tab bar */}
+      <div className="flex-1 flex flex-col pb-20 sm:pb-0">{children}</div>
     </div>
   );
 }
