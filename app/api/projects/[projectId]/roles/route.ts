@@ -10,7 +10,9 @@ export async function GET(_request: Request, { params }: { params: Params }) {
   const { projectId } = await params;
   const access = await getProjectAccess(projectId);
   if (!access.ok) return access.response;
-  return Response.json(await getProjectRoles(access.id));
+  return Response.json(
+    await getProjectRoles(access.id, access.project.rolesTemplateLoaded)
+  );
 }
 
 // POST /api/projects/[projectId]/roles — add a custom role to this project
@@ -24,7 +26,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     return Response.json({ error: "Role name is required" }, { status: 400 });
   }
 
-  const current = await getProjectRoles(access.id);
+  const current = await getProjectRoles(access.id, access.project.rolesTemplateLoaded);
   const sortOrder = current.length
     ? Math.max(...current.map((r) => r.sortOrder)) + 1
     : 0;

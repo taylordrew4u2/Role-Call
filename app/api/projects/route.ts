@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { projects, series } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { ensureSeriesSchema } from "@/lib/db/ensure-series-schema";
+import { ensureRolesTemplateSchema } from "@/lib/db/ensure-roles-template-schema";
 import { syncSeriesMembersIntoProject } from "@/lib/series-access";
 
 // GET /api/projects — list projects for the current user
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "Title is required" }, { status: 400 });
   }
 
+  await ensureRolesTemplateSchema();
+
   // If a series was chosen, confirm the user owns it before attaching.
   let attachSeriesId: number | null = null;
   if (seriesId) {
@@ -49,6 +52,7 @@ export async function POST(request: Request) {
       shootDate: shootDate ?? null,
       description: description ?? null,
       seriesId: attachSeriesId,
+      rolesTemplateLoaded: false,
     })
     .returning();
 

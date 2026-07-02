@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { projects, projectMembers, assignments, scenes, shots, shootDays } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getProjectRoles } from "@/lib/db/project-roles";
+import { ensureRolesTemplateSchema } from "@/lib/db/ensure-roles-template-schema";
 import { CheckCircle2, AlertTriangle, Info } from "lucide-react";
 
 type Params = Promise<{ projectId: string }>;
@@ -22,11 +23,12 @@ export default async function ChecksPage({ params }: { params: Params }) {
   const id = parseInt(projectId, 10);
   if (isNaN(id)) redirect("/dashboard");
 
+  await ensureRolesTemplateSchema();
   const [project] = await db.select().from(projects).where(eq(projects.id, id));
   if (!project) redirect("/dashboard");
 
   const [roles, asg, members, sceneRows, shotRows, days] = await Promise.all([
-    getProjectRoles(id),
+    getProjectRoles(id, project.rolesTemplateLoaded),
     db.select().from(assignments).where(eq(assignments.projectId, id)),
     db.select().from(projectMembers).where(eq(projectMembers.projectId, id)),
     db.select().from(scenes).where(eq(scenes.projectId, id)),

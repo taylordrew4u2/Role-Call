@@ -33,6 +33,10 @@ export const projects = pgTable("projects", {
   //   "single" — one camera (e.g. iPhone): one character per shot
   //   "dual"   — two cameras: also covers characters together (two-shots)
   cameraSetup: text("camera_setup"),
+  // Whether the global role template (Director, DP, Gaffer, ...) has been
+  // loaded into this project's Role Assignments board. New projects start
+  // with an empty board — the user opts in via "Load template".
+  rolesTemplateLoaded: boolean("roles_template_loaded").notNull().default(false),
   // Optional parent series; null for standalone projects.
   seriesId: integer("series_id").references(() => series.id, {
     onDelete: "set null",
