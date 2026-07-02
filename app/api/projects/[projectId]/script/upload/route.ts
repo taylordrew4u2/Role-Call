@@ -110,11 +110,11 @@ async function extractText(file: File): Promise<string | null> {
         return { promise, resolve, reject };
       };
     }
-    const { getDocumentProxy, extractText } = await import("unpdf");
+    const { getDocumentProxy } = await import("unpdf");
+    const { extractPdfScreenplay } = await import("@/lib/pdf-screenplay");
     const buffer = new Uint8Array(await file.arrayBuffer());
     const pdf = await getDocumentProxy(buffer);
-    const { text } = await extractText(pdf, { mergePages: true });
-    return text;
+    return await extractPdfScreenplay(pdf);
   }
   return null;
 }
