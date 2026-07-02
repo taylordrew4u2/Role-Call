@@ -202,6 +202,9 @@ export function ScriptWorkspace({
               setFileUrl(url);
               setFileName(name);
             }}
+            characterNames={cast
+              .map((c) => c.character)
+              .filter((c): c is string => Boolean(c && c.trim()))}
           />
           <div className="space-y-3">
             {isWriter && (
