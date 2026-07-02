@@ -90,6 +90,7 @@ export function ScreenplayEditor({
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [uploadError, setUploadError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [extractFailed, setExtractFailed] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [charSuggest, setCharSuggest] = useState<{ options: string[]; lineStart: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -321,6 +322,9 @@ export function ScreenplayEditor({
       onFileChange(data.url, data.name);
       if (typeof data.content === "string") {
         pushChange(data.content);
+        setExtractFailed(false);
+      } else {
+        setExtractFailed(true);
       }
     } catch {
       setUploadError("Network error during upload.");
@@ -380,11 +384,12 @@ export function ScreenplayEditor({
             {uploadError}
           </p>
         )}
-        {fileUrl && !/\.(txt|fountain|fdx)$/i.test(fileName ?? "") && (
+        {fileUrl && extractFailed && (
           <p className="mt-2 text-xs text-slate-400">
-            We can&apos;t auto-extract text from this file type — the editor below
-            wasn&apos;t updated. Paste the script text in manually, or upload a
-            .txt, .fountain, or .fdx file to auto-fill it.
+            We couldn&apos;t auto-extract text from this file — the editor below
+            wasn&apos;t updated. Paste the script text in manually, or (for
+            scanned PDFs) upload a text-based .txt, .fountain, .fdx, or PDF
+            export instead.
           </p>
         )}
       </div>
