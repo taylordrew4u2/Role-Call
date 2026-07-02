@@ -110,31 +110,26 @@ const HIGHLIGHT_COLORS = [
   "bg-rose-100 border-l-4 border-rose-400",
 ];
 
+// The raw text already carries the screenplay layout (indentation for cues,
+// dialogue, parentheticals; right offset for transitions) — render it as-is,
+// exactly like the editor page, and only add emphasis where it helps.
 function elementClass(type: ElementType): string {
   switch (type) {
     case "scene":
-      return "font-bold uppercase tracking-wide text-slate-900 mt-6 mb-1";
+      return "font-bold text-slate-900";
     case "transition":
-      return "text-right uppercase text-slate-700 mt-4";
+      return "text-slate-700";
     case "character":
-      return "text-center uppercase font-medium text-slate-900 mt-4 mb-0";
+      return "font-medium text-slate-900";
     case "parenthetical":
-      return "text-center text-slate-600 italic";
+      return "text-slate-600";
     case "dialogue":
-      return "mx-auto text-slate-900";
+      return "text-slate-900";
     case "action":
       return "text-slate-800";
     case "blank":
-      return "h-3";
+      return "";
   }
-}
-
-// For dialogue/character/parenthetical we constrain width like a real script page
-function elementStyle(type: ElementType): React.CSSProperties {
-  if (type === "dialogue" || type === "parenthetical") {
-    return { maxWidth: "360px", margin: "0 auto" };
-  }
-  return {};
 }
 
 export function ScriptHighlighter({
@@ -241,11 +236,16 @@ export function ScriptHighlighter({
         </div>
       )}
 
-      {/* Script page */}
-      <div className="rounded-lg bg-slate-300 py-6 px-4">
+      {/* Script page — same size and page style as the editor */}
+      <div className="rounded-lg bg-slate-300 py-6 px-4 min-h-[70vh]">
         <div
-          className="bg-white shadow-md mx-auto max-w-[680px] min-h-[40vh] px-16 py-14"
-          style={{ fontFamily: "'Courier New', Courier, monospace", fontSize: "12pt", lineHeight: "1.7" }}
+          className="bg-white shadow-md mx-auto max-w-[680px] min-h-[64vh]"
+          style={{
+            fontFamily: "'Courier New', Courier, monospace",
+            fontSize: "12pt",
+            lineHeight: "1.7",
+            padding: "72px 64px",
+          }}
         >
           {lines.map((line, idx) => {
             const isHighlighted =
@@ -254,23 +254,16 @@ export function ScriptHighlighter({
               (line.speaker === selectedNorm ||
                 (line.speaker === null && isInSelectedBlock(lines, idx, selectedNorm)));
 
-            const baseClass = elementClass(line.elementType);
-            const style = elementStyle(line.elementType);
-
             return (
               <div
                 key={idx}
                 className={cn(
-                  "break-words",
-                  baseClass,
-                  isHighlighted && cn(
-                    HIGHLIGHT_COLORS[selectedColor],
-                    "pl-3"
-                  )
+                  "whitespace-pre-wrap break-words",
+                  elementClass(line.elementType),
+                  isHighlighted && HIGHLIGHT_COLORS[selectedColor]
                 )}
-                style={style}
               >
-                {line.raw.trim() || line.raw}
+                {line.raw || " "}
               </div>
             );
           })}
