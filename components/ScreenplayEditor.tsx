@@ -192,6 +192,9 @@ export function ScreenplayEditor({
       }
       setUploadError("");
       onFileChange(data.url, data.name);
+      if (typeof data.content === "string") {
+        pushChange(data.content);
+      }
     } catch {
       setUploadError("Network error during upload.");
     } finally {
@@ -248,6 +251,13 @@ export function ScreenplayEditor({
         {uploadError && (
           <p className="mt-2 text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">
             {uploadError}
+          </p>
+        )}
+        {fileUrl && !/\.(txt|fountain|fdx)$/i.test(fileName ?? "") && (
+          <p className="mt-2 text-xs text-slate-400">
+            We can&apos;t auto-extract text from this file type — the editor below
+            wasn&apos;t updated. Paste the script text in manually, or upload a
+            .txt, .fountain, or .fdx file to auto-fill it.
           </p>
         )}
       </div>
