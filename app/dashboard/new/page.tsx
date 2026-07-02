@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Clapperboard, ArrowLeft, Users2, Check, Layers, Clock, MapPin, UtensilsCrossed, LogOut } from "lucide-react";
+import { Clapperboard, ArrowLeft, Users2, Check, Layers } from "lucide-react";
 import { PRODUCTION_TYPES, getProductionType } from "@/lib/production-types";
 
 export default function NewProjectPage() {
@@ -23,21 +23,12 @@ function NewProjectForm() {
   const searchParams = useSearchParams();
   const seriesParam = searchParams.get("series");
   const seriesId = seriesParam ? parseInt(seriesParam, 10) : null;
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
 
-  // Step 1 & 2: project basics
   const [projectType, setProjectType] = useState<string>("");
   const [title, setTitle] = useState("");
   const [shootDate, setShootDate] = useState("");
   const [description, setDescription] = useState("");
-
-  // Step 3: call sheet / first shoot day
-  const [callTime, setCallTime] = useState("");
-  const [lunchTime, setLunchTime] = useState("");
-  const [wrapTime, setWrapTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [locationAddress, setLocationAddress] = useState("");
-  const [locationNotes, setLocationNotes] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -75,27 +66,6 @@ function NewProjectForm() {
         return;
       }
       const project = await res.json();
-
-      // If any call sheet fields were filled in, create the first shoot day.
-      const hasCallSheet =
-        callTime || lunchTime || wrapTime || location || locationAddress || locationNotes;
-      if (hasCallSheet) {
-        await fetch(`/api/projects/${project.id}/shoot-days`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            dayNumber: 1,
-            shootDate: shootDate || null,
-            callTime: callTime || null,
-            lunchTime: lunchTime || null,
-            wrapTime: wrapTime || null,
-            location: location || null,
-            locationAddress: locationAddress || null,
-            locationNotes: locationNotes || null,
-          }),
-        });
-      }
-
       router.push(`/dashboard/${project.id}`);
     } catch {
       setError("Network error. Please try again.");
@@ -134,10 +104,6 @@ function NewProjectForm() {
           <span className="text-slate-300">→</span>
           <span className={step === 2 ? "font-semibold text-slate-900" : "text-slate-400"}>
             2. Project details
-          </span>
-          <span className="text-slate-300">→</span>
-          <span className={step === 3 ? "font-semibold text-slate-900" : "text-slate-400"}>
-            3. Call sheet
           </span>
         </div>
 
@@ -191,7 +157,7 @@ function NewProjectForm() {
 
         {/* Step 2: Project details */}
         {step === 2 && (
-          <div className="max-w-2xl mx-auto grid gap-6 md:grid-cols-[1fr_280px]">
+          <form onSubmit={handleSubmit} className="max-w-2xl mx-auto grid gap-6 md:grid-cols-[1fr_280px]">
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Project details</CardTitle>
@@ -246,12 +212,11 @@ function NewProjectForm() {
                       Back
                     </Button>
                     <Button
-                      type="button"
+                      type="submit"
                       className="flex-1"
-                      disabled={!title.trim()}
-                      onClick={() => setStep(3)}
+                      disabled={!title.trim() || loading}
                     >
-                      Next: Call Sheet →
+                      {loading ? "Creating…" : "Create Project →"}
                     </Button>
                   </div>
                 </div>
@@ -287,122 +252,9 @@ function NewProjectForm() {
                 </p>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Step 3: Call sheet */}
-        {step === 3 && (
-          <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Call sheet</CardTitle>
-                <CardDescription>
-                  Set up times and location for your shoot. This creates your first shoot day — you can add more in the Schedule tab.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {/* Times */}
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                    Times
-                  </p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="callTime" className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-emerald-600" /> Call Time
-                      </Label>
-                      <Input
-                        id="callTime"
-                        placeholder="7:00 AM"
-                        value={callTime}
-                        onChange={(e) => setCallTime(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="lunchTime" className="flex items-center gap-1.5">
-                        <UtensilsCrossed className="h-3.5 w-3.5 text-amber-600" /> Lunch
-                      </Label>
-                      <Input
-                        id="lunchTime"
-                        placeholder="12:30 PM"
-                        value={lunchTime}
-                        onChange={(e) => setLunchTime(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="wrapTime" className="flex items-center gap-1.5">
-                        <LogOut className="h-3.5 w-3.5 text-slate-500" /> Wrap
-                      </Label>
-                      <Input
-                        id="wrapTime"
-                        placeholder="6:00 PM"
-                        value={wrapTime}
-                        onChange={(e) => setWrapTime(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                    Location
-                  </p>
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="location" className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-red-500" /> Location Name
-                      </Label>
-                      <Input
-                        id="location"
-                        placeholder="e.g. Main Set, Studio A, Rooftop"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="locationAddress">Address</Label>
-                      <Input
-                        id="locationAddress"
-                        placeholder="123 Main St, City, State"
-                        value={locationAddress}
-                        onChange={(e) => setLocationAddress(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="locationNotes">Parking / Access Notes</Label>
-                      <Input
-                        id="locationNotes"
-                        placeholder="Park in lot B, enter via rear gate"
-                        value={locationNotes}
-                        onChange={(e) => setLocationNotes(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {error && (
-                  <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">
-                    {error}
-                  </p>
-                )}
-
-                <div className="flex gap-2 pt-1">
-                  <Button type="button" variant="outline" onClick={() => setStep(2)}>
-                    Back
-                  </Button>
-                  <Button type="submit" className="flex-1" disabled={loading}>
-                    {loading ? "Creating…" : "Create Project →"}
-                  </Button>
-                </div>
-
-                <p className="text-xs text-slate-400 text-center">
-                  You can skip any field and add it later in the Schedule tab.
-                </p>
-              </CardContent>
-            </Card>
           </form>
         )}
+
       </main>
     </div>
   );

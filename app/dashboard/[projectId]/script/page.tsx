@@ -43,7 +43,6 @@ export default async function ScriptPage({ params }: { params: Params }) {
 
   const canManage = await isProjectManager(project, userId);
   const writerId = writerIdOf(project);
-  const isWriter = writerId !== null && writerId === userId;
   // Only owners, directors, and the writer see the editing tab.
   const canViewEditing = await isProjectEditor(project, userId);
 
@@ -105,7 +104,7 @@ export default async function ScriptPage({ params }: { params: Params }) {
       <ScriptWorkspace
         projectId={id}
         isOwner={canManage}
-        isWriter={isWriter}
+        userId={userId}
         canViewEditing={canViewEditing}
         ownerId={project.ownerId}
         writerId={writerId}
