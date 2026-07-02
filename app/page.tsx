@@ -3,6 +3,65 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Clapperboard, ListVideo, Star, UsersRound, PenLine } from "lucide-react";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+
+// Structured data for search engines and AI answer engines (Google rich
+// results, ChatGPT/Perplexity-style citation crawlers all consume JSON-LD).
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: SITE_DESCRIPTION,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      featureList: [
+        "Shot list generated from a screenplay",
+        "Cast list extracted from the script",
+        "Crew role assignments with backups",
+        "Screenplay editor with suggestion workflow",
+        "Shooting schedule and call sheets",
+        "Shoot locations pinned on an interactive map",
+      ],
+      audience: {
+        "@type": "Audience",
+        audienceType: "Indie and student filmmakers",
+      },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "What is RoleCall?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "RoleCall is a free web app for planning indie and student film productions. It turns a screenplay into a shot list, extracts the cast, assigns crew roles, and builds schedules, call sheets, and location maps.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can RoleCall generate a shot list from my script?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. Paste or upload your screenplay (PDF, Final Draft .fdx, Fountain, or plain text) and RoleCall parses scenes and generates a starter shot list — action coverage, dialogue coverage, or both — tagged by character, using pure text parsing with no AI cost.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Is RoleCall free?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes, RoleCall is free to use. Invite your whole cast and crew by link — no per-seat pricing.",
+          },
+        },
+      ],
+    },
+  ],
+};
 
 const FEATURES = [
   {
@@ -33,6 +92,10 @@ export default async function LandingPage() {
 
   return (
     <main className="flex flex-col min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+      />
       {/* Nav */}
       <nav className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2 font-bold text-xl text-slate-900">

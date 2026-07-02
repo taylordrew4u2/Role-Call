@@ -1,0 +1,23 @@
+# RoleCall
+
+> RoleCall is a free web app for planning indie and student film productions. It turns a screenplay into a shot list, extracts the cast from the script, assigns every crew role, and builds shooting schedules, call sheets, and location maps — so nothing falls through the cracks on shoot day.
+
+RoleCall is built for small productions: short films, student films, music videos, commercials, and social content. Everything runs from the script — upload a screenplay as PDF, Final Draft (.fdx), Fountain, or plain text, or write it in the built-in screenplay editor.
+
+## Key features
+
+- **Shot list from script**: Parses the screenplay into scenes and generates a starter shot list (action coverage, dialogue coverage, or shot-per-line), tagged by character. Pure text parsing — no AI cost, works offline from the script.
+- **Cast from script**: One click extracts every speaking character. Assign actors to roles and track which parts are filled.
+- **Crew role assignments**: A role board (Director, DP, Gaffer, Sound Mixer, and more) with primary and backup assignees per responsibility. Templates are opt-in; a Lean 8-Person Template maps a full crew onto three people for micro-budget shoots.
+- **Screenplay editor**: Celtx-style formatting — Tab cycles element types, Enter continues to the next logical element, character cues autocomplete from the cast. Non-writers suggest edits; the appointed writer approves them.
+- **Schedule & call sheets**: Shoot days with call/lunch/wrap times, cast-on-set, shot counts, and estimated shoot time.
+- **Locations**: Scene locations imported from the script, geocoded, and pinned on an interactive map.
+- **Series support**: Group projects that share one team; the whole series team joins each new project automatically.
+
+## Pricing
+
+Free. Cast and crew join by invite link — no per-seat accounts.
+
+## Audience
+
+Indie filmmakers, film students, production teachers, and small production teams.

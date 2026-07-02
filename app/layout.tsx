@@ -8,11 +8,46 @@ import {
 import { auth } from "@clerk/nextjs/server";
 import "./globals.css";
 import { Toaster } from "@/components/Toaster";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "RoleCall — Film Production Role Tracker",
-  description:
-    "Assign every responsibility on your short film so nothing falls through the cracks on shoot day.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "RoleCall — Film Production Planning for Indie Filmmakers",
+    template: "%s · RoleCall",
+  },
+  description: SITE_DESCRIPTION,
+  keywords: [
+    "film production app",
+    "shot list generator",
+    "shot list from script",
+    "script breakdown software",
+    "call sheet app",
+    "film crew roles",
+    "indie film production",
+    "student film planning",
+    "screenplay editor online",
+    "production scheduling",
+  ],
+  applicationName: SITE_NAME,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: "RoleCall — Film Production Planning for Indie Filmmakers",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary",
+    title: "RoleCall — Film Production Planning for Indie Filmmakers",
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
 };
 
 async function NavAuth() {
