@@ -8,6 +8,7 @@ import {
 import { auth } from "@clerk/nextjs/server";
 import "./globals.css";
 import { Toaster } from "@/components/Toaster";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -48,6 +49,19 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: SITE_NAME,
+  },
+};
+
+export const viewport = {
+  themeColor: "#dc2626",
 };
 
 async function NavAuth() {
@@ -82,6 +96,7 @@ export default function RootLayout({
           </header>
           {children}
           <Toaster />
+          <ServiceWorkerRegistrar />
         </ClerkProvider>
       </body>
     </html>
