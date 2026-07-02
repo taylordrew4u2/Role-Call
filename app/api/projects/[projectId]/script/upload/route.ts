@@ -59,8 +59,8 @@ export async function POST(request: Request, { params }: { params: Params }) {
   return Response.json({ url: blob.url, name: file.name, content }, { status: 201 });
 }
 
-/** Extracts plain text from text-based screenplay formats. Returns null for
- * formats we can't parse (PDF, Word) — those stay as a download-only link. */
+/** Extracts plain text from text-based screenplay formats and PDFs. Returns
+ * null for formats we can't parse (Word) — those stay as a download-only link. */
 async function extractText(file: File): Promise<string | null> {
   const name = file.name.toLowerCase();
   if (name.endsWith(".txt") || name.endsWith(".fountain")) {
@@ -75,6 +75,18 @@ async function extractText(file: File): Promise<string | null> {
       return texts.join("").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
     });
     return lines.join("\n");
+  }
+  if (name.endsWith(".pdf")) {
+    try {
+      const { PDFParse } = await import("pdf-parse");
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const parser = new PDFParse({ data: buffer });
+      const result = await parser.getText();
+      return result.text;
+    } catch {
+      // Malformed or image-only (scanned) PDF — keep the file as a download link.
+      return null;
+    }
   }
   return null;
 }
