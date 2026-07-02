@@ -10,6 +10,7 @@ import "./globals.css";
 import { Toaster } from "@/components/Toaster";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -99,6 +100,7 @@ export default function RootLayout({
           <Toaster />
           <ServiceWorkerRegistrar />
           <OfflineIndicator />
+          <InstallPrompt />
         </ClerkProvider>
       </body>
     </html>
