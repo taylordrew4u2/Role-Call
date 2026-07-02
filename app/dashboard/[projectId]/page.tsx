@@ -27,16 +27,17 @@ export default async function ProjectPage({ params }: { params: Params }) {
   const isAdmin = await isProjectAdmin(project, userId);
   const canEdit = await isProjectEditor(project, userId);
 
-  // Ensure the owner has a projectMembers row so they can be assigned to roles.
-  // Also claim any manually-added row that has no clerkUserId yet (e.g. added by
-  // email before the owner signed up) to avoid creating a duplicate row.
+  // Ensure the owner has a crew projectMembers row so they can be assigned to roles.
+  // We specifically look for a crew row (not cast) — the owner may also have a cast
+  // row if they're acting, but they need a separate crew row to appear in assignments.
   const [existingOwnerMember] = await db
     .select({ id: projectMembers.id, clerkUserId: projectMembers.clerkUserId })
     .from(projectMembers)
     .where(
       and(
         eq(projectMembers.projectId, id),
-        eq(projectMembers.clerkUserId, userId)
+        eq(projectMembers.clerkUserId, userId),
+        eq(projectMembers.kind, "crew")
       )
     );
   if (!existingOwnerMember) {

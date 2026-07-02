@@ -59,7 +59,7 @@ export function ScriptWorkspace({
   const [fileName, setFileName] = useState(initialFileName);
   const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [currentWriter, setCurrentWriter] = useState<string | null>(writerId);
-  const isWriter = currentWriter !== null && currentWriter === userId;
+  const isWriter = isOwner || (currentWriter !== null && currentWriter === userId);
 
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestAnchor, setSuggestAnchor] = useState("");

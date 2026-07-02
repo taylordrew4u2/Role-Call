@@ -69,17 +69,17 @@ export async function getCollaboratorAccess(
   };
 }
 
-/** Like getCollaboratorAccess but requires the caller to be the script writer. */
+/** Like getCollaboratorAccess but requires the caller to be the script writer or project owner. */
 export async function requireScriptWriter(
   projectIdStr: string
 ): Promise<CollaboratorOk | Err> {
   const access = await getCollaboratorAccess(projectIdStr);
   if (!access.ok) return access;
-  if (!access.isWriter) {
+  if (!access.isWriter && !access.isOwner) {
     return {
       ok: false,
       response: Response.json(
-        { error: "Only the appointed script writer can do that." },
+        { error: "Only the appointed script writer or project owner can do that." },
         { status: 403 }
       ),
     };
