@@ -143,7 +143,7 @@ export default function PrivacyPage() {
           <a href="https://github.com/taylordrew4u2/Role-Call" className="text-red-600 underline" target="_blank" rel="noopener noreferrer">
             github.com/taylordrew4u2/Role-Call
           </a>{" "}
-          or email taylordrew4u@gmail.com.
+          or email skatematesnyc@gmail.com.
         </p>
       </div>
     </main>
