@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import {
   ClerkProvider,
   SignInButton,
@@ -96,6 +97,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
+      <head>
+        <meta name="google-adsense-account" content="ca-pub-6785541334207915" />
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6785541334207915"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <ClerkProvider>
           <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3 print:hidden">
