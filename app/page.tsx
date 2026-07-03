@@ -149,7 +149,15 @@ export default async function LandingPage() {
       </section>
 
       <footer className="border-t border-slate-200 px-6 py-4 text-center text-xs text-slate-400">
-        © {new Date().getFullYear()} RoleCall · Built with Next.js, Clerk &amp; Vercel
+        <p>© {new Date().getFullYear()} RoleCall · Built with Next.js, Clerk &amp; Vercel</p>
+        <p className="mt-1.5 flex items-center justify-center gap-3">
+          <Link href="/privacy" className="hover:text-slate-600 underline underline-offset-2">
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className="hover:text-slate-600 underline underline-offset-2">
+            Terms of Service
+          </Link>
+        </p>
       </footer>
     </main>
   );
