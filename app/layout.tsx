@@ -7,6 +7,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/Toaster";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
@@ -90,11 +91,15 @@ async function NavAuth() {
   );
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Per-request CSP nonce generated in proxy.ts; required on the AdSense
+  // script under the strict (nonce-based) Content Security Policy.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" className="h-full antialiased">
       <head>
@@ -104,6 +109,7 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6785541334207915"
           crossOrigin="anonymous"
           strategy="beforeInteractive"
+          nonce={nonce}
         />
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
