@@ -9,6 +9,7 @@ import { Clapperboard, ArrowLeft } from "lucide-react";
 import { getSeriesAccess } from "@/lib/series-access";
 import { ensureSeriesSchema } from "@/lib/db/ensure-series-schema";
 import { SeriesWorkspace } from "@/components/SeriesWorkspace";
+import { AppBottomNav } from "@/components/AppBottomNav";
 
 type Params = Promise<{ seriesId: string }>;
 
@@ -46,10 +47,12 @@ export default async function SeriesPage({ params }: { params: Params }) {
             <span className="hidden sm:inline">RoleCall</span>
           </Link>
         </div>
-        <UserButton />
+        <div className="hidden sm:block">
+          <UserButton />
+        </div>
       </header>
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
         <SeriesWorkspace
           seriesId={access.id}
           isOwner={access.isOwner}
@@ -60,6 +63,7 @@ export default async function SeriesPage({ params }: { params: Params }) {
           addableProjects={access.isOwner ? addable : []}
         />
       </main>
+      <AppBottomNav />
     </div>
   );
 }

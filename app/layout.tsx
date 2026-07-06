@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
+import { ClerkProvider } from "@clerk/nextjs";
 import { headers } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/Toaster";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { NavAuth } from "@/components/NavAuth";
+import { cn } from "@/lib/utils";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -73,24 +69,6 @@ export const viewport = {
   viewportFit: "cover" as const,
 };
 
-async function NavAuth() {
-  let userId: string | null = null;
-  try {
-    ({ userId } = await auth());
-  } catch {
-    // Clerk not configured or middleware unreachable — show sign-in buttons
-  }
-
-  if (userId) return <UserButton />;
-
-  return (
-    <>
-      <SignInButton fallbackRedirectUrl="/dashboard" />
-      <SignUpButton fallbackRedirectUrl="/dashboard" />
-    </>
-  );
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -109,6 +87,11 @@ export default async function RootLayout({
     pathname === "/dashboard" ||
     (pathname.startsWith("/dashboard/") && !pathname.startsWith("/dashboard/new"));
 
+  // The homepage has its own nav row (logo + Guides); on mobile it folds
+  // this auth header into that row instead of stacking two bars, but keeps
+  // the standalone bar on desktop where the two-row look has always been.
+  const isHomepage = pathname === "/";
+
   return (
     <html lang="en" className="h-full antialiased">
       <head>
@@ -124,7 +107,12 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <ClerkProvider>
           {!hasOwnHeader && (
-            <header className="sticky top-0 z-30 border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3 print:hidden">
+            <header
+              className={cn(
+                "sticky top-0 z-30 border-b border-slate-200 bg-white px-6 py-4 items-center justify-end gap-3 print:hidden",
+                isHomepage ? "hidden sm:flex" : "flex"
+              )}
+            >
               <NavAuth />
             </header>
           )}

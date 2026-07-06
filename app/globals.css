@@ -16,6 +16,9 @@ body {
 html {
   /* No rubber-band overscroll or accidental pull-to-refresh */
   overscroll-behavior-y: none;
+  /* A single px-wider element shouldn't be able to create a horizontal
+     scrollbar/pan on phones. */
+  overflow-x: hidden;
 }
 
 body {
@@ -23,6 +26,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   /* Momentum scrolling for nested scroll areas */
   -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
 }
 
 button, a, [role="button"] {
