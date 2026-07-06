@@ -109,7 +109,7 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
         <Link
           href="/dashboard"
           className="flex items-center gap-2 font-bold text-xl text-slate-900"

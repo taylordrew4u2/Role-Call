@@ -36,7 +36,7 @@ export default async function SeriesPage({ params }: { params: Params }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white px-4 sm:px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="text-slate-500 hover:text-slate-900 transition-colors">
             <ArrowLeft className="h-5 w-5" />
