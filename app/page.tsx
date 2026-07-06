@@ -106,12 +106,6 @@ export default async function LandingPage() {
           <Button variant="ghost" asChild className="hidden sm:inline-flex">
             <Link href="/guides">Guides</Link>
           </Button>
-          <Button variant="ghost" asChild>
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/sign-up">Get started</Link>
-          </Button>
         </div>
       </nav>
 
