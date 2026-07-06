@@ -41,7 +41,7 @@ export default async function ProjectLayout({
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       {/* Top nav */}
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-6 py-4 flex items-center justify-between print:hidden">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white px-4 sm:px-6 py-4 flex items-center justify-between print:hidden">
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard"

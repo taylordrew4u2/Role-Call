@@ -124,7 +124,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <ClerkProvider>
           {!hasOwnHeader && (
-            <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3 print:hidden">
+            <header className="sticky top-0 z-30 border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3 print:hidden">
               <NavAuth />
             </header>
           )}
