@@ -96,9 +96,18 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const requestHeaders = await headers();
   // Per-request CSP nonce generated in proxy.ts; required on the AdSense
   // script under the strict (nonce-based) Content Security Policy.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const nonce = requestHeaders.get("x-nonce") ?? undefined;
+
+  // Dashboard, project, and series pages render their own header (logo,
+  // back button, page actions) with a UserButton already in it — showing
+  // this generic one too would stack two account buttons on one screen.
+  const pathname = requestHeaders.get("x-pathname") ?? "";
+  const hasOwnHeader =
+    pathname === "/dashboard" ||
+    (pathname.startsWith("/dashboard/") && !pathname.startsWith("/dashboard/new"));
 
   return (
     <html lang="en" className="h-full antialiased">
@@ -114,9 +123,11 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <ClerkProvider>
-          <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3 print:hidden">
-            <NavAuth />
-          </header>
+          {!hasOwnHeader && (
+            <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3 print:hidden">
+              <NavAuth />
+            </header>
+          )}
           {children}
           <Toaster />
           <ServiceWorkerRegistrar />
