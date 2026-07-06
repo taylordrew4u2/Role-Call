@@ -103,6 +103,9 @@ export default async function LandingPage() {
           RoleCall
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="ghost" asChild className="hidden sm:inline-flex">
+            <Link href="/guides">Guides</Link>
+          </Button>
           <Button variant="ghost" asChild>
             <Link href="/sign-in">Sign in</Link>
           </Button>
@@ -151,6 +154,9 @@ export default async function LandingPage() {
       <footer className="border-t border-slate-200 px-6 py-4 text-center text-xs text-slate-400">
         <p>© {new Date().getFullYear()} RoleCall · Built with Next.js, Clerk &amp; Vercel</p>
         <p className="mt-1.5 flex items-center justify-center gap-3">
+          <Link href="/guides" className="hover:text-slate-600 underline underline-offset-2">
+            Production Guides
+          </Link>
           <Link href="/privacy" className="hover:text-slate-600 underline underline-offset-2">
             Privacy Policy
           </Link>
