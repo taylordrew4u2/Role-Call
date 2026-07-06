@@ -11,6 +11,7 @@ import { UserButton } from "@clerk/nextjs";
 import { formatDate } from "@/lib/utils";
 import { getProductionType } from "@/lib/production-types";
 import { CreateSeriesButton } from "@/components/CreateSeriesButton";
+import { AppBottomNav } from "@/components/AppBottomNav";
 import { ensureSeriesSchema } from "@/lib/db/ensure-series-schema";
 import { ensureScriptSchema } from "@/lib/db/ensure-script-schema";
 
@@ -119,17 +120,19 @@ export default async function DashboardPage() {
         </Link>
         <div className="flex items-center gap-3">
           <CreateSeriesButton />
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="hidden sm:inline-flex">
             <Link href="/dashboard/new">
               <Plus className="h-4 w-4 mr-1" /> New Project
             </Link>
           </Button>
-          <UserButton />
+          <div className="hidden sm:block">
+            <UserButton />
+          </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
@@ -156,7 +159,7 @@ export default async function DashboardPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {userSeries.map((s) => (
-                <Link key={s.id} href={`/dashboard/series/${s.id}`} className="group">
+                <Link key={s.id} href={`/dashboard/series/${s.id}`} className="group block transition-transform active:scale-[0.98]">
                   <Card className="h-full transition-shadow hover:shadow-md cursor-pointer group-hover:border-slate-300 border-l-4 border-l-red-500">
                     <CardHeader>
                       <span className="inline-flex items-center gap-1 w-fit rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-600 mb-1">
@@ -209,7 +212,7 @@ export default async function DashboardPage() {
                 const crewCount = memberCounts.get(project.id) ?? 0;
                 const shootBadge = daysUntilShoot(project.shootDate);
                 return (
-                  <Link key={project.id} href={`/dashboard/${project.id}`} className="group">
+                  <Link key={project.id} href={`/dashboard/${project.id}`} className="group block transition-transform active:scale-[0.98]">
                     <Card className="h-full transition-shadow hover:shadow-md cursor-pointer group-hover:border-slate-300">
                       <CardHeader>
                         {(() => {
@@ -267,7 +270,7 @@ export default async function DashboardPage() {
               })}
 
               {/* Add new card */}
-              <Link href="/dashboard/new" className="group">
+              <Link href="/dashboard/new" className="group block transition-transform active:scale-[0.98]">
                 <div className="h-full min-h-[120px] flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 p-6 text-center transition-colors hover:border-slate-400 hover:bg-slate-50 cursor-pointer">
                   <Plus className="h-8 w-8 text-slate-300 group-hover:text-slate-500 mb-2" />
                   <span className="text-sm text-slate-400 group-hover:text-slate-600 font-medium">
@@ -279,6 +282,7 @@ export default async function DashboardPage() {
           </>
         )}
       </main>
+      <AppBottomNav />
     </div>
   );
 }

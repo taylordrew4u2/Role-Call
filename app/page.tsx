@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Clapperboard, ListVideo, Star, UsersRound, PenLine } from "lucide-react";
+import { NavAuth } from "@/components/NavAuth";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 // Structured data for search engines and AI answer engines (Google rich
@@ -96,16 +97,20 @@ export default async function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
       />
-      {/* Nav */}
-      <nav className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
+      {/* Nav — the sole mobile top bar (root layout's auth header is
+          desktop-only here); sticky on phones only, unchanged on desktop. */}
+      <nav className="sticky top-0 z-30 sm:static border-b border-slate-200 bg-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div className="flex items-center gap-2 font-bold text-xl text-slate-900">
           <Clapperboard className="h-6 w-6 text-red-600" />
           RoleCall
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="ghost" asChild className="hidden sm:inline-flex">
             <Link href="/guides">Guides</Link>
           </Button>
+          <div className="flex items-center gap-2 sm:hidden">
+            <NavAuth />
+          </div>
         </div>
       </nav>
 
