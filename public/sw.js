@@ -1,4 +1,4 @@
-const CACHE = "rolecall-v2";
+const CACHE = "rolecall-v3";
 const OFFLINE_URL = "/offline.html";
 const QUEUE_DB = "rolecall-sync";
 const QUEUE_STORE = "outbox";
@@ -205,16 +205,32 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Navigations: network-first, cached page, then offline page.
+  // Never cache redirects (e.g. /dashboard → /sign-in when the session is
+  // gone): navigation requests use redirect mode "manual", and browsers hard-
+  // fail a navigation served a redirected response from cache — the installed
+  // app then won't open at all until its storage is cleared.
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
+          if (res.ok && !res.redirected && res.type === "basic") {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, copy));
+          }
           return res;
         })
         .catch(async () => {
           const hit = await caches.match(request);
+          if (hit && hit.redirected) {
+            // Entry cached before this guard existed — strip the redirect
+            // flag so the browser accepts it instead of erroring.
+            const body = await hit.blob();
+            return new Response(body, {
+              status: hit.status,
+              statusText: hit.statusText,
+              headers: hit.headers,
+            });
+          }
           return hit || caches.match(OFFLINE_URL);
         })
     );
