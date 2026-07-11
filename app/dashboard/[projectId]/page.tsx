@@ -32,17 +32,22 @@ export default async function ProjectPage({ params }: { params: Params }) {
   // Ensure the owner has a crew projectMembers row so they can be assigned to roles.
   // We specifically look for a crew row (not cast) — the owner may also have a cast
   // row if they're acting, but they need a separate crew row to appear in assignments.
-  const [existingOwnerMember] = await db
-    .select({ id: projectMembers.id, clerkUserId: projectMembers.clerkUserId })
-    .from(projectMembers)
-    .where(
-      and(
-        eq(projectMembers.projectId, id),
-        eq(projectMembers.clerkUserId, userId),
-        eq(projectMembers.kind, "crew")
-      )
-    );
-  if (!existingOwnerMember) {
+  // Only the actual project creator gets this: other visitors join via invite or
+  // join links, which create their (non-owner) member rows.
+  const [existingOwnerMember] =
+    project.ownerId === userId
+      ? await db
+          .select({ id: projectMembers.id, clerkUserId: projectMembers.clerkUserId })
+          .from(projectMembers)
+          .where(
+            and(
+              eq(projectMembers.projectId, id),
+              eq(projectMembers.clerkUserId, userId),
+              eq(projectMembers.kind, "crew")
+            )
+          )
+      : [];
+  if (project.ownerId === userId && !existingOwnerMember) {
     const clerkUser = await currentUser();
     const email = clerkUser?.primaryEmailAddress?.emailAddress ?? null;
     const displayName =
