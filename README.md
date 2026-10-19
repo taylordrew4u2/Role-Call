@@ -21,6 +21,8 @@ through the cracks.
 
 ---
 
+<p align="center"><img src="docs/screenshots/overview.png" alt="A screenplay page next to the shot list RoleCall generated from it, with the cast pulled from the script" width="100%" /></p>
+
 ## 📸 Demo
 
 > **[▶ Open the live app](https://role-call-taylordrew4u2s-projects.vercel.app)** — sign in and create a project in under a minute. Fully responsive — built to live in your hand on set.
